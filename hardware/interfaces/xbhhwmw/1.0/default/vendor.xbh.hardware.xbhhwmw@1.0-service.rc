@@ -1,0 +1,4 @@
+service xbhhwmw-1-0 /vendor/bin/hw/vendor.xbh.hardware.xbhhwmw@1.0-service
+    class hal
+    user root
+    group root system shell bluetooth input mediadrm camera audio wifi media_rw everybody external_storage

@@ -1,0 +1,47 @@
+LOCAL_PATH := $(call my-dir)
+
+include $(CLEAR_VARS)
+#LOCAL_MODULE := libstaticms9282
+#LOCAL_SRC_FILES  := $(LOCAL_PATH)/libMS9282_64.a
+#LOCAL_EXPORT_C_INCLUDE_DIRS := \
+    $(LOCAL_PATH)/include
+
+#include $(PREBUILT_STATIC_LIBRARY)
+
+
+#include $(CLEAR_VARS)
+LOCAL_MODULE := libms9282
+LOCAL_PROPRIETARY_MODULE := true
+LOCAL_C_INCLUDES := $(LOCAL_PATH)/include
+
+#ALL_DEFAULT_INSTALLED_MODULES += $(LOCAL_MODULE)
+#LOCAL_MODULE_TAGS := optional
+#LOCAL_CFLAGS += -Wl -Bsymbolic -O2 -mcmodel=large
+
+
+
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+#LOCAL_MODULE_PATH_32 := $(TARGET_OUT_VENDOR)/lib
+#LOCAL_MODULE_PATH_64 := $(TARGET_OUT_VENDOR)/lib64
+
+LOCAL_SRC_FILES := \
+	ms9282_platform.c
+    
+LOCAL_SHARED_LIBRARIES := libc liblog libutils libcutils libbase \
+    liblog \
+    libdl \
+    libhardware
+
+
+#LOCAL_PREBUILT_LIBS :=libMS9282_64.a
+#LOCAL_STATIC_LIBRARIES := libstaticms9282
+#LOCAL_CFLAGS += -DANDROID_PLATFORM_SDK_VERSION=$(PLATFORM_SDK_VERSION)
+
+
+LOCAL_LDFLAGS_arm += $(LOCAL_PATH)/libs/libMS9282_32.a
+LOCAL_LDFLAGS_arm64  += $(LOCAL_PATH)/libs/libMS928x_aarch64-linux-android-4.9.1_Rev3.11.0_20231102.a
+#LOCAL_MULTILIB := false
+
+
+include $(BUILD_SHARED_LIBRARY)
+#include $(BUILD_PREBUILT)

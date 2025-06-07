@@ -1,0 +1,7 @@
+allow system_app hal_xbhhwmw_hwservice:hwservice_manager { find };
+allow system_app hal_xbhhwmw_default:binder { call transfer };
+
+allow system_app xbhmiddleware_service:service_manager { add find };
+allow system_app xbhmiddlewareplugin_service:service_manager { add find };
+
+get_prop(system_app, vendor_xbh_prop);

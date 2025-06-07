@@ -1,0 +1,5 @@
+persist.vendor.xbh.                     u:object_r:vendor_xbh_prop:s0
+vendor.xbh.                             u:object_r:vendor_xbh_prop:s0
+ro.vendor.xbh.                          u:object_r:vendor_xbh_prop:s0
+
+

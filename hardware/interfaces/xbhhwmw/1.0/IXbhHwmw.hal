@@ -1,0 +1,9 @@
+package vendor.xbh.hardware.xbhhwmw@1.0;
+
+import IXbhHwmwCallback;
+
+interface IXbhHwmw {
+    hwInvoke(string request) generates (string ret);
+    hwRegistCallback(IXbhHwmwCallback callback) generates (int32_t ret);
+};
+

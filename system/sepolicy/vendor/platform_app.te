@@ -1,0 +1,6 @@
+allow platform_app hal_xbhhwmw_hwservice:hwservice_manager { find };
+allow platform_app hal_xbhhwmw_default:binder { call };
+
+allow platform_app xbhmiddleware_service:service_manager { add find };
+allow platform_app xbhmiddlewareplugin_service:service_manager { add find };
+allow platform_app vendor_xbh_prop:file { read open getattr map };

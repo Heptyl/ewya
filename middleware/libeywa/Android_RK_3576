@@ -1,0 +1,136 @@
+LOCAL_PATH := $(call my-dir)
+
+## board define
+XMR3576A := 1
+XMR3576B := 2
+XMR3576C := 3
+XMR3588U := 4
+XMR3576D := 5
+XMR3576E := 6
+XMR3576U := 7
+MY_BOARD := ${XMR3576B}
+
+###################### libeywa [Start] ################
+include $(CLEAR_VARS)
+
+
+BUILD_DATE := $(shell date '+%Y-%m-%d-%H:%M:%S')
+$(info ======================================= Building on $(BUILD_DATE))
+LOCAL_CFLAGS += -DBUILD_DATE="\"$(BUILD_DATE)\""
+
+## board marco define
+LOCAL_CFLAGS += -DXMR3576A=${XMR3576A}
+LOCAL_CFLAGS += -DXMR3576B=${XMR3576B}
+LOCAL_CFLAGS += -DXMR3576C=${XMR3576C}
+LOCAL_CFLAGS += -DXMR3588U=${XMR3588U}
+LOCAL_CFLAGS += -DXMR3576D=${XMR3576D}
+LOCAL_CFLAGS += -DXMR3576E=${XMR3576E}
+LOCAL_CFLAGS += -DXMR3576U=${XMR3576U}
+
+LOCAL_MODULE := libeywa
+LOCAL_MODULE_TAGS := optional
+LOCAL_32_BIT_ONLY := false
+LOCAL_PROPRIETARY_MODULE := true
+
+LOCAL_CFLAGS += -O0 -Wall -Wno-unused-parameter
+LOCAL_CFLAGS += -DRK_3576
+LOCAL_CFLAGS += -DXBHBUILD_HW
+LOCAL_CFLAGS += -DTYPE_BOARD=${MY_BOARD}
+#采用RTC原生的实现
+LOCAL_CFLAGS += -DXBH_USE_NATIVE_RTC
+#使用hal层的接口来检测信号状态，如果不定义就是使用JAVA/kotlin API来实现
+LOCAL_CFLAGS += -DXBH_USE_HAL_API_TO_CHECK_SIGNAL_STATUS
+
+#引入logic里面参与编译的代码
+include $(LOCAL_PATH)/common.mk
+
+eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/rockchip/rk_3576/*.cpp)
+
+ifeq (${MY_BOARD}, ${XMR3576A})
+$(info ======================================= Building on A board)
+eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/rockchip/rk_3576/board/XbhXMR3576_A.cpp)
+endif
+ifeq (${MY_BOARD}, ${XMR3576B})
+$(info ======================================= Building on B board)
+eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/rockchip/rk_3576/board/XbhXMR3576_B.cpp)
+endif
+ifeq (${MY_BOARD}, ${XMR3576C})
+$(info ======================================= Building on C board)
+eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/rockchip/rk_3576/board/XbhXMR3576_C.cpp)
+endif
+ifeq (${MY_BOARD}, ${XMR3588U})
+$(info ======================================= Building on U board)
+eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/rockchip/rk_3576/board/XbhXMR3588_U.cpp)
+endif
+ifeq (${MY_BOARD}, ${XMR3576D})
+$(info ======================================= Building on D board)
+eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/rockchip/rk_3576/board/XbhXMR3576_D.cpp)
+endif
+ifeq (${MY_BOARD}, ${XMR3576E})
+$(info ======================================= Building on E board)
+eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/rockchip/rk_3576/board/XbhXMR3576_E.cpp)
+endif
+ifeq (${MY_BOARD}, ${XMR3576U})
+$(info ======================================= Building on U board)
+eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/rockchip/rk_3576/board/XbhXMR3576_U.cpp)
+endif
+
+LOCAL_SRC_FILES := $(eywa_src_list:$(LOCAL_PATH)/%=%)
+
+LOCAL_C_INCLUDES := \
+    $(LOCAL_PATH)/include \
+    $(LOCAL_PATH)/common/include \
+    $(LOCAL_PATH)/common/db \
+    $(LOCAL_PATH)/common/db/config \
+    $(LOCAL_PATH)/common/db/config/iniparser \
+    $(LOCAL_PATH)/common/db/config/iniprovider \
+    $(LOCAL_PATH)/common/db/securec \
+    $(LOCAL_PATH)/platform/include \
+    $(LOCAL_PATH)/platform/fboard \
+    $(LOCAL_PATH)/platform/rockchip/rk_3576 \
+    $(LOCAL_PATH)/platform/rockchip/rk_3576/board \
+    hardware/libhardware/include \
+    system/core/libsystem/include \
+    system/core/libutils/include \
+    hardware/rockchip/vman_module \
+    $(LOCAL_PATH)/../../thirdpart/libhdcp/include \
+    hardware/rockchip/libvendor_storage
+
+LOGIC_DIRS := $(shell find $(LOCAL_PATH)/logic -type d)
+LOCAL_C_INCLUDES += $(LOGIC_DIRS)
+
+LOCAL_SHARED_LIBRARIES := \
+    libbase \
+    liblog \
+    libdl \
+    libutils \
+    libhardware \
+    libhidlbase \
+    libhidltransport \
+    libbinder \
+    libhwbinder \
+    vendor.xbh.hardware.xbhhwmw@1.0 \
+    libcutils \
+    libms9282 \
+    rockchip.hardware.outputmanager@1.0 \
+    libhdcp \
+    libvendor_storage
+
+#ALL_DEFAULT_INSTALLED_MODULES += $(LOCAL_MODULE)
+include $(BUILD_SHARED_LIBRARY)
+###################### libeywa [End] ##################
+
+###################### libhdcp [Start] ################
+include $(CLEAR_VARS)
+LOCAL_MODULE_SUFFIX := .so
+LOCAL_MODULE := libhdcp
+LOCAL_MODULE_CLASS := SHARED_LIBRARIES
+LOCAL_VENDOR_MODULE := true
+LOCAL_CHECK_ELF_FILES := false
+LOCAL_MULTILIB := both
+LOCAL_SRC_FILES_arm := ../../thirdpart/libhdcp/lib/libhdcp.so
+LOCAL_SRC_FILES_arm64 := ../../thirdpart/libhdcp/lib64/libhdcp.so
+include $(BUILD_PREBUILT)
+###################### libhdcp [End] ##################
+
+include vendor/xbh/middleware/libeywa/logic/vga2hdmi/module/ms9282/libms9282/Android.mk

@@ -1,0 +1,11 @@
+/*
+ * Copyright (C) 2015-2020 Socionext Inc.
+ */
+
+// REVISION: 20141217
+#ifndef __VIDEOIF_TXCORE_DDCBUF_H__
+#define __VIDEOIF_TXCORE_DDCBUF_H__
+
+#define VIDEOIF_DDCBUF_DDCBUF_ADDR 0x00003C00
+
+#endif // __VIDEOIF_TXCORE_DDCBUF_H__

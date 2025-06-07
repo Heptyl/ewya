@@ -1,0 +1,135 @@
+LOCAL_PATH := $(call my-dir)
+
+## board define
+XMM9679A := 1
+XMM9679B := 2
+XMM9679C := 3
+XMM9679U := 4
+XMM9679D := 5
+XMM9679E := 6
+XMM9679G := 7
+##电源一体板
+XMDM9679A := 100
+MY_BOARD := ${XMM9679A}
+
+include $(CLEAR_VARS)
+
+BUILD_DATE := $(shell date '+%Y-%m-%d-%H:%M:%S')
+$(info ======================================= Building on $(BUILD_DATE))
+LOCAL_CFLAGS += -DBUILD_DATE="\"$(BUILD_DATE)\""
+
+## board marco define
+LOCAL_CFLAGS += -DXMM9679A=${XMM9679A}
+LOCAL_CFLAGS += -DXMM9679B=${XMM9679B}
+LOCAL_CFLAGS += -DXMM9679C=${XMM9679C}
+LOCAL_CFLAGS += -DXMM9679U=${XMM9679U}
+LOCAL_CFLAGS += -DXMM9679D=${XMM9679D}
+LOCAL_CFLAGS += -DXMM9679E=${XMM9679E}
+LOCAL_CFLAGS += -DXMM9679G=${XMM9679G}
+##电源一体板
+LOCAL_CFLAGS += -DXMDM9679A=${XMDM9679A}
+
+LOCAL_MODULE := libeywa
+LOCAL_MODULE_TAGS := optional
+LOCAL_32_BIT_ONLY := false
+LOCAL_PROPRIETARY_MODULE := true
+
+LOCAL_CFLAGS += -O0 -Wall -Wno-unused-parameter
+LOCAL_CFLAGS += -DMTK_9679
+LOCAL_CFLAGS += -DXBHBUILD_HW
+LOCAL_CFLAGS += -DTYPE_BOARD=${MY_BOARD}
+#采用RTC原生的实现
+LOCAL_CFLAGS += -DXBH_USE_NATIVE_RTC
+#采用扩展色温
+LOCAL_CFLAGS += -DXBH_USE_COLORTEMP_EXT
+
+ifeq ($(XBH_FEATURE_OPTION_ENABLE_VS_CUSTOMIZATION), true)
+LOCAL_CFLAGS += -DXBH_FEATURE_OPTION_ENABLE_VS_CUSTOMIZATION
+endif
+#使用hal层的接口来检测信号状态，如果不定义就是使用JAVA/kotlin API来实现
+LOCAL_CFLAGS += -DXBH_USE_HAL_API_TO_CHECK_SIGNAL_STATUS
+
+#引入logic里面参与编译的代码
+include $(LOCAL_PATH)/common.mk
+
+eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/mtk/mtk_9679/*.cpp)
+
+ifeq (${MY_BOARD}, ${XMM9679A})
+$(info ======================================= Building on A board)
+eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/mtk/mtk_9679/board/XbhXMM9679_A.cpp)
+endif
+ifeq (${MY_BOARD}, ${XMM9679B})
+$(info ======================================= Building on B board)
+eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/mtk/mtk_9679/board/XbhXMM9679_B.cpp)
+endif
+ifeq (${MY_BOARD}, ${XMM9679C})
+$(info ======================================= Building on C board)
+eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/mtk/mtk_9679/board/XbhXMM9679_C.cpp)
+endif
+ifeq (${MY_BOARD}, ${XMM9679U})
+$(info ======================================= Building on U board)
+eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/mtk/mtk_9679/board/XbhXMM9679_U.cpp)
+endif
+ifeq (${MY_BOARD}, ${XMM9679D})
+$(info ======================================= Building on D board)
+eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/mtk/mtk_9679/board/XbhXMM9679_D.cpp)
+endif
+ifeq (${MY_BOARD}, ${XMM9679E})
+$(info ======================================= Building on E board)
+eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/mtk/mtk_9679/board/XbhXMM9679_E.cpp)
+endif
+ifeq (${MY_BOARD}, ${XMM9679G})
+$(info ======================================= Building on G board)
+eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/mtk/mtk_9679/board/XbhXMM9679_G.cpp)
+endif
+##电源一体板
+ifeq (${MY_BOARD}, ${XMDM9679A})
+$(info ======================================= Building on XMD 9679A board)
+eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/mtk/mtk_9679/board/XbhXMDM9679_A.cpp)
+endif
+LOCAL_SRC_FILES := $(eywa_src_list:$(LOCAL_PATH)/%=%)
+
+LOCAL_C_INCLUDES := \
+    $(LOCAL_PATH)/include \
+    $(LOCAL_PATH)/common/include \
+    $(LOCAL_PATH)/common/db \
+    $(LOCAL_PATH)/common/db/config \
+    $(LOCAL_PATH)/common/db/config/iniparser \
+    $(LOCAL_PATH)/common/db/config/iniprovider \
+    $(LOCAL_PATH)/common/db/securec \
+    $(LOCAL_PATH)/platform/include \
+    $(LOCAL_PATH)/platform/fboard \
+    $(LOCAL_PATH)/platform/mtk/mtk_9679 \
+    $(LOCAL_PATH)/platform/mtk/mtk_9679/board \
+    hardware/libhardware/include \
+    system/core/libsystem/include \
+    system/core/libutils/include \
+    vendor/mediatek/tv/misdk/mi/mi/core/modules/include \
+    vendor/mediatek/tv/misdk/mi/mi/modules/inputsrc/primary/include
+
+
+LOGIC_DIRS := $(shell find $(LOCAL_PATH)/logic -type d)
+LOCAL_C_INCLUDES += $(LOGIC_DIRS)
+
+LOCAL_SHARED_LIBRARIES := \
+    libbase \
+    liblog \
+    libdl \
+    libutils \
+    libhardware \
+    libhidlbase \
+    libhidltransport \
+    libbinder \
+    libhwbinder \
+    vendor.xbh.hardware.xbhhwmw@1.0 \
+    libcutils \
+    libmi3_client_mi_hal \
+    libmi3_ipc_common \
+    libmi3_mi_hal \
+    libmi3_c2_hal \
+    libms9282
+
+#ALL_DEFAULT_INSTALLED_MODULES += $(LOCAL_MODULE)
+include $(BUILD_SHARED_LIBRARY)
+
+include vendor/xbh/middleware/libeywa/logic/vga2hdmi/module/ms9282/libms9282/Android.mk

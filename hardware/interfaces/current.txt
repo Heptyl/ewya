@@ -1,0 +1,3 @@
+03978d1b44bbe279ce07d802370a6886f62e3e4149583785494e588351ab8b28 vendor.xbh.hardware.xbhhwmw@1.0::types
+cc0c793bb707e412b82e17b15f2c13188b059acbe72c994aa364452327dce742 vendor.xbh.hardware.xbhhwmw@1.0::IXbhHwmw
+375f4d07ff8ea72a167a61cd3d3e827dcf03de25a052ecddebeb71c4d20de923 vendor.xbh.hardware.xbhhwmw@1.0::IXbhHwmwCallback

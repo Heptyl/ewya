@@ -1,0 +1,46 @@
+/*
+ * Copyright (C) 2015-2020 Socionext Inc.
+ */
+#ifndef __VIDEOIF_REGS_H__
+#define __VIDEOIF_REGS_H__
+
+#include "VIDEOIF_MNCORE_AKERX.h"
+#include "VIDEOIF_MNCORE_CKDET.h"
+#include "VIDEOIF_MNCORE_CKGEN.h"
+#include "VIDEOIF_MNCORE_EDIDRX.h"
+#include "VIDEOIF_MNCORE_EDKEY.h"
+#include "VIDEOIF_MNCORE_HDCPRX.h"
+#include "VIDEOIF_MNCORE_IRQ.h"
+#include "VIDEOIF_MNCORE_MONITOR.h"
+#include "VIDEOIF_MNCORE_SCDCS.h"
+#include "VIDEOIF_MNCORE_SYSTEM.h"
+#include "VIDEOIF_MNCORE_SYSTEM2.h"
+#include "VIDEOIF_MNCORE_TMDS.h"
+#include "VIDEOIF_RXCORE_AUDIO.h"
+#include "VIDEOIF_RXCORE_CC.h"
+#include "VIDEOIF_RXCORE_CKDET.h"
+#include "VIDEOIF_RXCORE_INF.h"
+#include "VIDEOIF_RXCORE_IRQ.h"
+#include "VIDEOIF_RXCORE_LINK.h"
+#include "VIDEOIF_RXCORE_PKT.h"
+#include "VIDEOIF_RXCORE_SYSTEM.h"
+#include "VIDEOIF_RXCORE_VIDEO.h"
+#include "VIDEOIF_TXCORE_ACUS.h"
+#include "VIDEOIF_TXCORE_AUDIO.h"
+#include "VIDEOIF_TXCORE_CSC.h"
+#include "VIDEOIF_TXCORE_DDCBUF.h"
+#include "VIDEOIF_TXCORE_DEBUG.h"
+#include "VIDEOIF_TXCORE_DNC.h"
+#include "VIDEOIF_TXCORE_EDKEY.h"
+#include "VIDEOIF_TXCORE_HDCP.h"
+#include "VIDEOIF_TXCORE_INF.h"
+#include "VIDEOIF_TXCORE_IRQ.h"
+#include "VIDEOIF_TXCORE_LINK.h"
+#include "VIDEOIF_TXCORE_PKT.h"
+#include "VIDEOIF_TXCORE_RANDOM.h"
+#include "VIDEOIF_TXCORE_SYSTEM.h"
+#include "VIDEOIF_TXCORE_UPC.h"
+#include "VIDEOIF_TXCORE_VCI.h"
+#include "VIDEOIF_TXCORE_VIDEO.h"
+
+#endif // __VIDEOIF_REGS_H__

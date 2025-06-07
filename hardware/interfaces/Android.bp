@@ -1,0 +1,5 @@
+hidl_package_root {
+    name: "vendor.xbh.hardware",
+    path: "vendor/xbh/hardware/interfaces",
+}
+

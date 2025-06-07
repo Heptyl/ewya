@@ -1,0 +1,21 @@
+#! /system/bin/sh
+
+param_count=$#
+
+if [ $param_count -eq 0 ]; then
+    echo "param count must > 0 !!!!!!!!!!!"
+elif [ $param_count -eq 1 ]; then
+    am startservice -n xbh.platform.middleware/.XbhMwService -a "$1"
+else
+    action="$1"
+    let count=param_count-1
+    shift
+    am_command="am startservice -n xbh.platform.middleware/.XbhMwService -a \"$action\""
+    for i in $(seq 1 $count)
+    do
+        am_command+=" --es value$i \"$1\""
+        shift
+    done
+    #echo "command = $am_command"
+    eval $am_command
+fi

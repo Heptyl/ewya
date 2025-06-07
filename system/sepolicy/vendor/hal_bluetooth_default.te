@@ -1,0 +1,2 @@
+allow hal_bluetooth_default vendor_xbh_prop:file { read map open getattr };
+get_prop(hal_bluetooth_default, vendor_xbh_prop)

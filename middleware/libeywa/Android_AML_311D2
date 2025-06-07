@@ -1,0 +1,134 @@
+LOCAL_PATH := $(call my-dir)
+
+## board define
+XMA311D2B2 := 1
+XMA311D2X := 2
+XMA311D2B := 3
+XMA311D2Y := 4
+XMA311D2T2 := 5
+MY_BOARD := ${XMA311D2B2}
+
+include $(CLEAR_VARS)
+
+BUILD_DATE := $(shell date '+%Y-%m-%d-%H:%M:%S')
+$(info ======================================= Building on $(BUILD_DATE))
+LOCAL_CFLAGS += -DBUILD_DATE="\"$(BUILD_DATE)\""
+
+## board marco define
+LOCAL_CFLAGS += -DXMA311D2A2=${XMA311D2A2}
+LOCAL_CFLAGS += -DXMA311D2B2=${XMA311D2B2}
+LOCAL_CFLAGS += -DXMA311D2X=${XMA311D2X}
+LOCAL_CFLAGS += -DXMA311D2B=${XMA311D2B}
+LOCAL_CFLAGS += -DXMA311D2Y=${XMA311D2Y}
+LOCAL_CFLAGS += -DXMA311D2T2=${XMA311D2T2}
+
+LOCAL_MODULE := libeywa
+LOCAL_MODULE_TAGS := optional
+LOCAL_32_BIT_ONLY := false
+LOCAL_PROPRIETARY_MODULE := true
+
+LOCAL_CFLAGS += -O0 -Wall -Wno-unused-parameter
+LOCAL_CFLAGS += -DAML_311D2
+LOCAL_CFLAGS += -DXBHBUILD_HW
+LOCAL_CFLAGS += -DTYPE_BOARD=${MY_BOARD}
+#采用RTC原生的实现
+LOCAL_CFLAGS += -DXBH_USE_NATIVE_RTC
+
+#使用hal层的接口来检测信号状态，如果不定义就是使用JAVA/kotlin API来实现
+#LOCAL_CFLAGS += -DXBH_USE_HAL_API_TO_CHECK_SIGNAL_STATUS
+
+#引入logic里面参与编译的代码
+include $(LOCAL_PATH)/common.mk
+
+eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/amlogic/aml_311d2/*.cpp)
+
+ifeq (${MY_BOARD}, ${XMA311D2B2})
+$(info ======================================= Building on B2 board)
+eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/amlogic/aml_311d2/board/XbhXMA311D2_B2.cpp)
+endif
+
+ifeq (${MY_BOARD}, ${XMA311D2X})
+$(info ======================================= Building on X board)
+eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/amlogic/aml_311d2/board/XbhXMA311D2_X.cpp)
+endif
+
+ifeq (${MY_BOARD}, ${XMA311D2B})
+$(info ======================================= Building on B board)
+eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/amlogic/aml_311d2/board/XbhXMA311D2_B.cpp)
+endif
+
+ifeq (${MY_BOARD}, ${XMA311D2Y})
+$(info ======================================= Building on Y board)
+eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/amlogic/aml_311d2/board/XbhXMA311D2_Y.cpp)
+endif
+
+ifeq (${MY_BOARD}, ${XMA311D2T2})
+$(info ======================================= Building on T2 board)
+eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/amlogic/aml_311d2/board/XbhXMA311D2_T2.cpp)
+endif
+
+LOCAL_SRC_FILES := $(eywa_src_list:$(LOCAL_PATH)/%=%)
+
+LOCAL_C_INCLUDES := \
+    $(LOCAL_PATH)/include \
+    $(LOCAL_PATH)/common/include \
+    $(LOCAL_PATH)/common/db \
+    $(LOCAL_PATH)/common/db/config \
+    $(LOCAL_PATH)/common/db/config/iniparser \
+    $(LOCAL_PATH)/common/db/config/iniprovider \
+    $(LOCAL_PATH)/common/db/securec \
+    $(LOCAL_PATH)/platform/include \
+    $(LOCAL_PATH)/platform/fboard \
+    $(LOCAL_PATH)/platform/amlogic/aml_311d2 \
+    $(LOCAL_PATH)/platform/amlogic/aml_311d2/board \
+    hardware/libhardware/include \
+    system/core/libsystem/include \
+    system/core/libutils/include \
+    $(LOCAL_PATH)/../../../amlogic/common/frameworks/services/systemcontrol/PQ/include \
+    $(LOCAL_PATH)/../../../amlogic/common/frameworks/services/systemcontrol 
+
+LOGIC_DIRS := $(shell find $(LOCAL_PATH)/logic -type d)
+LOCAL_C_INCLUDES += $(LOGIC_DIRS)
+
+LOCAL_SHARED_LIBRARIES := \
+    libbase \
+    liblog \
+    libdl \
+    libutils \
+    libhardware \
+    libhidlbase \
+    libhidltransport \
+    libbinder \
+    libhwbinder \
+    vendor.xbh.hardware.xbhhwmw@1.0 \
+    libcutils \
+    libsystemcontrolservice \
+    libscreencontrolservice \
+    libscreencontrolclient \
+    libscreencontrol_jni \
+    libssl \
+    libcrypto \
+    libms9282
+
+ifeq ($(shell test $(PLATFORM_SDK_VERSION) -ge 28&& echo OK),OK)
+LOCAL_SHARED_LIBRARIES+=vendor.amlogic.hardware.systemcontrol@1.0
+LOCAL_SHARED_LIBRARIES+=vendor.amlogic.hardware.systemcontrol@1.1
+LOCAL_SHARED_LIBRARIES+=vendor.amlogic.hardware.screencontrol@1.0
+else
+LOCAL_SHARED_LIBRARIES+=vendor.amlogic.hardware.systemcontrol@1.0_vendor
+LOCAL_SHARED_LIBRARIES+=vendor.amlogic.hardware.screencontrol@1.0_vendor
+endif
+
+ifeq ($(TARGET_BUILD_LIVETV), true)
+LOCAL_CFLAGS += -DSUPPORT_TVSERVICE
+LOCAL_SHARED_LIBRARIES += \
+    vendor.amlogic.hardware.tvserver@1.0 \
+    libtvbinder
+
+LOCAL_C_INCLUDES += $(wildcard $(BOARD_AML_VENDOR_PATH)tv/frameworks/libtvbinder/include)
+endif
+
+#ALL_DEFAULT_INSTALLED_MODULES += $(LOCAL_MODULE)
+include $(BUILD_SHARED_LIBRARY)
+
+include vendor/xbh/middleware/libeywa/logic/vga2hdmi/module/ms9282/libms9282/Android.mk

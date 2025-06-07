@@ -1,0 +1,123 @@
+LOCAL_PATH := $(call my-dir)
+
+## board define
+XMH610A := 1
+MY_BOARD := ${XMH610A}
+
+###################### libeywa [Start] ################
+include $(CLEAR_VARS)
+
+
+BUILD_DATE := $(shell date '+%Y-%m-%d-%H:%M:%S')
+$(info ======================================= Building on $(BUILD_DATE))
+LOCAL_CFLAGS += -DBUILD_DATE="\"$(BUILD_DATE)\""
+
+## board marco define
+LOCAL_CFLAGS += -DXMH610A=${XMH610A}
+
+LOCAL_MODULE := libeywa
+LOCAL_MODULE_TAGS := optional
+LOCAL_32_BIT_ONLY := false
+LOCAL_PROPRIETARY_MODULE := true
+
+LOCAL_CFLAGS += -O0 -Wall -Wno-unused-parameter
+LOCAL_CFLAGS += -DHISI_610
+LOCAL_CFLAGS += -DXBHBUILD_HW
+LOCAL_CFLAGS += -DTYPE_BOARD=${MY_BOARD}
+#采用RTC原生的实现
+LOCAL_CFLAGS += -DXBH_USE_NATIVE_RTC
+#使用hal层的接口来检测信号状态，如果不定义就是使用JAVA/kotlin API来实现
+LOCAL_CFLAGS += -DXBH_USE_HAL_API_TO_CHECK_SIGNAL_STATUS
+
+#引入logic里面参与编译的代码
+include $(LOCAL_PATH)/common.mk
+
+eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/hisilicon/hi610/*.cpp)
+
+ifeq (${MY_BOARD}, ${XMH610A})
+$(info ======================================= Building on A board)
+eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/hisilicon/hi610/board/XbhXMH610_A.cpp)
+endif
+
+LOCAL_SRC_FILES := $(eywa_src_list:$(LOCAL_PATH)/%=%)
+
+LOCAL_C_INCLUDES := \
+    $(LOCAL_PATH)/include \
+    $(LOCAL_PATH)/common/include \
+    $(LOCAL_PATH)/common/db \
+    $(LOCAL_PATH)/common/db/config \
+    $(LOCAL_PATH)/common/db/config/iniparser \
+    $(LOCAL_PATH)/common/db/config/iniprovider \
+    $(LOCAL_PATH)/common/db/securec \
+    $(LOCAL_PATH)/platform/include \
+    $(LOCAL_PATH)/platform/fboard \
+    $(LOCAL_PATH)/platform/hisilicon/hi610 \
+    $(LOCAL_PATH)/platform/hisilicon/hi610/board \
+    hardware/libhardware/include \
+    system/core/libsystem/include \
+    system/core/libutils/include \
+    vendor/huanglong/modules/tvmw/include/include \
+    vendor/huanglong/modules/tvmw/source/common/include \
+    vendor/huanglong/linux/kernel/include \
+    vendor/huanglong/uapi/flash/include \
+    vendor/huanglong/uapi/pmoc/include \
+    vendor/huanglong/uapi/ir/include \
+    vendor/huanglong/uapi/panel/include \
+    vendor/huanglong/uapi/pdm/include \
+    vendor/huanglong/uapi/pwm/include \
+    vendor/huanglong/uapi/vo/include \
+    vendor/huanglong/uapi/include/video \
+    vendor/huanglong/uapi/include/cec \
+    vendor/huanglong/uapi/dispmng/include \
+    vendor/huanglong/uapi/otp/basic/include \
+    vendor/huanglong/uapi/hdmirx/include \
+    vendor/huanglong/uapi/include/audio \
+    vendor/huanglong/uapi/include/media \
+    vendor/huanglong/uapi/lsadc/include \
+    vendor/huanglong/uapi/ao/include \
+    vendor/huanglong/uapi/vo/include \
+    vendor/huanglong/uapi/pq/include \
+    vendor/huanglong/uapi/uart/include \
+    vendor/huanglong/uapi/common/include \
+    vendor/huanglong/linux/include/generic \
+    vendor/huanglong/custom/common/board
+# load hisi uapi include files
+#LOCAL_C_INCLUDES += $(call all-h-files-under, vendor/huanglong/uapi)
+
+LOGIC_DIRS := $(shell find $(LOCAL_PATH)/logic -type d)
+LOCAL_C_INCLUDES += $(LOGIC_DIRS)
+
+LOCAL_SHARED_LIBRARIES := \
+    libbase \
+    liblog \
+    libdl \
+    libutils \
+    libhardware \
+    libhidlbase \
+    libhidltransport \
+    libbinder \
+    libhwbinder \
+    vendor.xbh.hardware.xbhhwmw@1.0 \
+    libcutils \
+    libms9282 \
+    libuapi_gpio \
+    libuapi_i2c \
+    libuapi_flash \
+    libuapi_pmoc \
+    libuapi_pdm \
+    libuapi_pwm \
+    libuapi_dispmng \
+    libuapi_otpbasic \
+    libuapi_hdmirx \
+    libuapi_lsadc \
+    libuapi_ao \
+    libuapi_vo \
+    libuapi_pq \
+    libuapi_common \
+    libuapi_uart
+
+#ALL_DEFAULT_INSTALLED_MODULES += $(LOCAL_MODULE)
+include $(BUILD_SHARED_LIBRARY)
+###################### libeywa [End] ##################
+
+include vendor/xbh/middleware/libeywa/logic/vga2hdmi/module/ms9282/libms9282/Android.mk

@@ -1,0 +1,37 @@
+#! /system/bin/sh
+
+param_count=$#
+
+if [ $param_count -eq 0 ];then
+    echo "param count must > 0 !!!!!!!!!!!"
+else
+    action="$1\|\""
+    let count=param_count-1
+#    echo "count $count"
+    shift
+    am_command="settings put global xbh_function "
+    for i in $(seq 1 $count)
+    do
+        action+="$1|"
+        shift
+    done
+    am_command+=$action
+    am_command+="\""
+#    echo "command = $am_command"
+    #写入空返回值，覆盖上次
+    eval "settings put global xbh_function_return ''"
+    #写入命令前数据前先写入00用来刷新数据库的内容，防止内容相同时observer不响应
+    eval "settings put global xbh_function 00"
+
+    sleep 0.1
+    eval "$am_command"
+
+    value=`settings get global xbh_function_return`
+    #为空，循环获取返回值
+    while [ -z "$value" ]; do
+#      echo "Value is empty, waiting..."
+      sleep 0.1  #休眠0.1秒，获取返回值
+      value=`settings get global xbh_function_return`
+    done
+    echo "$value"
+fi
