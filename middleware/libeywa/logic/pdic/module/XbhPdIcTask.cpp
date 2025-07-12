@@ -71,15 +71,10 @@ XBH_S32 XbhPdIcTask::getUpgradeState(XBH_S32 devType, XBH_S32 * s32State)
 /**
  * 获取芯片状态
  */
-XBH_S32 XbhPdIcTask::getChipInitDone(XBH_S32 devType, XBH_BOOL* enable)
+XBH_S32 XbhPdIcTask::getChipInitDone(XBH_BOOL* enable)
 {
-    XBH_S32 s32Ret = XBH_FAILURE;
-    XbhPdIcInterface *tmp = getCurrIC(devType);
-    if(tmp != NULL)
-    {
-        s32Ret = tmp->getChipInitDone(enable);
-    }
-    return s32Ret;
+    *enable = minitdone;
+    return XBH_SUCCESS;
 }
 
 XBH_S32 XbhPdIcTask::getChipExist(XBH_S32 devType, XBH_BOOL* enable)
@@ -172,12 +167,18 @@ void XbhPdIcTask::run(const void* arg)
                 break;
         }
     }
-
+    //最里面的芯片初始完之后，内部还有流程在跑，因此需要延时1S才算初始化完成
+    usleep(1*1000*1000);
+    if(m_pXbhPdIcInterfacee[0] != NULL)
+    {
+        minitdone = XBH_TRUE;
+    }
 }
 
 XbhPdIcTask::XbhPdIcTask()
 {
     XLOGD(" begin ");
+    minitdone = XBH_FALSE;
     XbhService::getModuleInterface()->getPdIcTable(mList1);
     XbhService::getModuleInterface()->getPdIcI2cTable(mList2);
 

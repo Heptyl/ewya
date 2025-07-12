@@ -19,6 +19,8 @@ public:
     XBH_S32 getSourceSignalStatus(XBH_SOURCE_E u32Source, XBH_S32 *status);
     XBH_S32 getCurrSource(XBH_SOURCE_E *u32Source);
     XBH_S32 pushSourcePlugStatus(XBH_SOURCE_E u32Source, XBH_BOOL status);
+    XBH_S32 getCardIndexByName(char *name);
+    XBH_S32 setFollowPort(XBH_SOURCE_E u32Source);
 
     ~XbhSourceManager();
 
@@ -31,6 +33,7 @@ private:
 
     static XbhSourceManager *mInstance;
     static XbhMutex mLock;
+    static XbhMutex mCheckLock;
 
     XbhHdmiSwitchManager *m_pXbhHdmiSwitchManager;
     XbhFollowManager *m_pXbhFollowManager;

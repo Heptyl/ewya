@@ -32,6 +32,8 @@ enum XBH_EVENT_TYPE_E
     XBH_OPS_DEV_POWERON,                               /* 0X8009 ops device POWER ON */
     XBH_OPS_DEV_POWEROFF,                              /* 0X800A ops device POWER OFF */
 
+    XBH_OPS_BYPASS,                                    /* 0X800B ops bypass data */
+
     XBH_EVT_MSG_END,
 };
 

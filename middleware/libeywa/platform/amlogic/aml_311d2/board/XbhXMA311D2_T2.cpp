@@ -15,15 +15,19 @@
 #include "SystemControlClient.h"
 #include "XbhSourceManager.h"
 #include "XbhPowerSensorManager.h"
+
+#include <time.h>
+
 extern SystemControlClient* mSystemControlClient;
 
 XbhXMA311D2_T2            *XbhXMA311D2_T2::mInstance = XBH_NULL;
 XbhMutex                   XbhXMA311D2_T2::mLock;
+
 //HALL sensor MCU I2C register
 #define CMD_I2C_GET_ADC         0xA6
 #define RTK8367RB_VB_WOL_DEV            "/sys/devices/virtual/rtl8367/phy/wol"
 #define PHY_PORT_STATE_PATH             "/sys/class/rtl8367/phy/update_port_state"
-
+#define XBH_EEPROM_ADDR         0xA0   //eeprom的设备地址
 /***************************************PD power config start**********************************/
 #define ENABLE_DYNAMIC_CONFIG_PD_CHARGE
 
@@ -58,11 +62,162 @@ enum PD_CHARGE_CFG_TYPE_E {
 
 static XBH_U8  gConfiguedType = PD_CONFIG_AUTO;
 static XBH_BOOL gIsPDchargeCfgOk = XBH_FALSE;
+
+// 保存当前USBC-IN的工作模式,用于拔出时恢复
+static XBH_S32 pre_HostDeviceStatus = XBH_HOST_MODE;
 /***************************************PD power config end**********************************/
+
+#ifdef XBH_BOARD_ADC_PIR_CHAN
+/*标准时间转换为时间戳*/
+int standardtime_to_stamp(int year, int month, int mday, int hour, int minute, int second)
+{
+    int ret = 0;
+    struct tm stm;
+
+    memset(&stm, 0, sizeof(stm));
+
+    stm.tm_year = year-1900;
+    stm.tm_mon  = month-1;
+    stm.tm_mday = mday;
+    stm.tm_hour = hour;
+    stm.tm_min  = minute;
+    stm.tm_sec  = second;
+
+    ret = mktime(&stm);
+
+    return ret;
+}
+
+void set_pir_work_time(void)
+{
+    std::string mode;
+    if(mSystemControlClient && mSystemControlClient->getBootEnv("ubootenv.var.pir_wakeup_sw", mode))
+    {
+        if(mode.compare("1") == 0)
+        {
+            XLOGD("PIR wakeup sw is ON.\n");
+            time_t now;
+            time(&now);
+
+            //get current date
+            struct tm *t;
+            t = localtime(&now);
+            int cur_year  = t->tm_year + 1900;
+            int cur_month = t->tm_mon + 1;
+            int cur_mday  = t->tm_mday;
+            int cur_hour  =  t->tm_hour;
+            int cur_minute = t->tm_min;
+            int cur_second = t->tm_sec;
+
+            XLOGD("cur: %04d-%02d-%02d %02d:%02d:%02d",cur_year,cur_month,cur_mday,cur_hour,cur_minute,cur_second);
+            //get current timestamp
+            int cur_stamp = standardtime_to_stamp(cur_year,cur_month,cur_mday,cur_hour,cur_minute,cur_second);
+
+            //XLOGD("cur_stamp=%d",cur_stamp);
+            char cur_ts[256] = {0};
+            sprintf(cur_ts, "%d", cur_stamp);
+            XLOGD("cur_ts:%s\n",cur_ts);
+
+            //get begin timestamp
+            int begin_hour;
+            int begin_minute;
+            int begin_stamp = -1;
+            char start_ts[256] = {0};
+            char beginHHMM[PROPERTY_VALUE_MAX] = {0};
+            if(!property_get("persist.vendor.xbh.proximity.sensor.begintime", beginHHMM, ""))
+            {
+                memset(beginHHMM, 0, PROPERTY_VALUE_MAX);
+                XLOGE("property_get failed\n");
+            }
+            XLOGD("beginHHMM=%s",beginHHMM);
+
+            if(strlen(beginHHMM) == 5)
+            {
+                char hour[2] = {0};
+                char minute[2] = {0};
+                strncpy(hour,beginHHMM,2);
+                begin_hour = atoi(hour);
+                strncpy(minute,beginHHMM+3,2);
+                begin_minute = atoi(minute);
+                XLOGD("begin: %04d-%02d-%02d %02d:%02d:00",cur_year,cur_month,cur_mday,begin_hour,begin_minute);
+                begin_stamp = standardtime_to_stamp(cur_year,cur_month,cur_mday,begin_hour,begin_minute,0);
+                //XLOGD("begin_stamp=%d",begin_stamp);
+            }
+            else
+            {
+                XLOGE("beginHHMM is not HH:MM");
+            }
+
+            if(begin_stamp > 0)
+            {
+                sprintf(start_ts, "%d", begin_stamp);
+                XLOGD("start_ts:%s\n",start_ts);
+                //send the time to BL30
+                mSystemControlClient->writeSysfs("/sys/class/cec/start_time",start_ts);
+            }
+            else
+            {
+                XLOGE("begin_stamp is invalied !!!\n");
+            }
+
+            //get end timestamp
+            int end_hour;
+            int end_minute;
+            int end_stamp = -1;
+            char end_ts[256] = {0};
+            char endHHMM[PROPERTY_VALUE_MAX] = {0};
+            if(!property_get("persist.vendor.xbh.proximity.sensor.endtime", endHHMM, ""))
+            {
+                memset(endHHMM, 0, PROPERTY_VALUE_MAX);
+                XLOGE("property_get failed\n");
+            }
+            XLOGD("endHHMM=%s",endHHMM);
+
+            if(strlen(endHHMM) == 5)
+            {
+                char hour[2] = {0};
+                char minute[2] = {0};
+                strncpy(hour,endHHMM,2);
+                end_hour = atoi(hour);
+                strncpy(minute,endHHMM+3,2);
+                end_minute = atoi(minute);
+                XLOGD("end: %04d-%02d-%02d %02d:%02d:00",cur_year,cur_month,cur_mday,end_hour,end_minute);
+                end_stamp = standardtime_to_stamp(cur_year,cur_month,cur_mday,end_hour,end_minute,0);
+                //XLOGD("end_stamp=%d",end_stamp);
+            }
+            else
+            {
+                XLOGE("endHHMM is not HH:MM");
+            }
+
+            if(end_stamp > 0)
+            {
+                sprintf(end_ts, "%d", end_stamp);
+                XLOGD("end_ts:%s\n",end_ts);
+
+                //send the time to BL30
+                mSystemControlClient->writeSysfs("/sys/class/cec/end_time",end_ts);
+                mSystemControlClient->writeSysfs("/sys/class/cec/cur_time",cur_ts);
+            }
+            else
+            {
+                XLOGE("end_stamp is invalid !!!\n");
+            }
+        }
+        else
+        {
+            XLOGE("PIR sw is OFF.\n");
+        }
+
+    }
+}
+#endif
 
 XbhXMA311D2_T2::XbhXMA311D2_T2()
 {
     XLOGD(" begin ");
+    // 开机初始化USB-C in MODE
+    Switch_UsbC_in_Mode();
     XbhMWThread::run(XbhMWThread::REPEAT);
     VgaEnable = XBH_FALSE;
     frontHpdState = XBH_TRUE;
@@ -75,6 +230,58 @@ XbhXMA311D2_T2::XbhXMA311D2_T2()
 XbhXMA311D2_T2::~XbhXMA311D2_T2()
 {
 }
+
+/*记忆host/device开关状态,处理重启后开关状态问题*/
+XBH_BOOL XbhXMA311D2_T2::Switch_UsbC_in_Mode(XBH_VOID)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_CHAR s8Buff[PROPERTY_VALUE_MAX] = {0};
+    this->XbhAmlogic_311d2::getHostOrDeviceStatus((XBH_S32 *)s8Buff);
+    XLOGI("%s, s8Buff[0]:%d",__func__,s8Buff[0]);
+    if(s8Buff[0] == XBH_HOST_MODE)
+    {
+        s32Ret = this->XbhAmlogic_311d2::setHostOrDeviceStatus(XBH_HOST_MODE);
+    }
+    else if(s8Buff[0] == XBH_DEVICE_MODE)
+    {
+        s32Ret= this->XbhAmlogic_311d2::setHostOrDeviceStatus(XBH_DEVICE_MODE);
+    }
+    else
+    {
+        XLOGD("unkown USBC-C Mode!!!");
+    }
+    return s32Ret;
+}
+
+#define GSV6125_REG_ADDR_COUNT  2 //设备寄存器长度
+#define GSV6125_REG_DATA_LEN    1 //写入的数据长度
+#define TYPEC_OUT_USB_SWITCH_TO_OPS  1
+#define TYPEC_OUT_USB_SWITCH_TO_ANDROID 2
+XBH_S32 XbhXMA311D2_T2::followToOps1()
+{
+    XBH_U8 value = TYPEC_OUT_USB_SWITCH_TO_OPS;
+    XBH_S32 s32Ret = XBH_FAILURE;
+
+
+    XLOGD("switchTypecOutUsbToOPS,%02x, %02x, %02x", XBH_BOARD_I2C_GSV6125_I2C_NUM, XBH_BOARD_I2C_GSV6125_I2C_ADDR, REG_6125_USB_SWITCH_CTRL);
+    XbhModuleInterface::followToOps1();
+    s32Ret = setIICData(XBH_BOARD_I2C_GSV6125_I2C_NUM, XBH_BOARD_I2C_GSV6125_I2C_ADDR,
+                REG_6125_USB_SWITCH_CTRL, GSV6125_REG_ADDR_COUNT, GSV6125_REG_DATA_LEN, &value);
+    return s32Ret;
+}
+
+XBH_S32 XbhXMA311D2_T2::followToAndroid()
+{
+    XBH_U8 value = TYPEC_OUT_USB_SWITCH_TO_ANDROID;
+    XBH_S32 s32Ret = XBH_FAILURE;
+
+    XLOGD("switchTypecOutUsbToAndroid");
+    XbhModuleInterface::followToAndroid();
+    s32Ret = setIICData(XBH_BOARD_I2C_GSV6125_I2C_NUM, XBH_BOARD_I2C_GSV6125_I2C_ADDR,
+                REG_6125_USB_SWITCH_CTRL, GSV6125_REG_ADDR_COUNT, GSV6125_REG_DATA_LEN, &value);
+    return s32Ret;
+}
+
 
 XBH_S32 XbhXMA311D2_T2::getHdmi1Det(XBH_BOOL *enable)
 {
@@ -372,11 +579,15 @@ XBH_S32 XbhXMA311D2_T2::setLedPwrStatus(XBH_LED_LIGHT_E enState)
     {
         case XBH_LED_LIGHT_RED:
             s32Ret = setGpioOutputValue(XBH_BOARD_GPIO_POWER_LED_RED,    XBH_BOARD_GPIO_POWER_LED_RED_ON);
-            s32Ret &= setGpioOutputValue(XBH_BOARD_GPIO_POWER_LED_WHITE, XBH_BOARD_GPIO_POWER_LED_WHITE_OFF);
+            s32Ret |= setGpioOutputValue(XBH_BOARD_GPIO_POWER_LED_WHITE, XBH_BOARD_GPIO_POWER_LED_WHITE_OFF);
             break;
         case XBH_LED_LIGHT_GREEN:
             s32Ret = setGpioOutputValue(XBH_BOARD_GPIO_POWER_LED_WHITE,XBH_BOARD_GPIO_POWER_LED_WHITE_ON);
-            s32Ret &= setGpioOutputValue(XBH_BOARD_GPIO_POWER_LED_RED,  XBH_BOARD_GPIO_POWER_LED_RED_OFF);
+            s32Ret |= setGpioOutputValue(XBH_BOARD_GPIO_POWER_LED_RED,  XBH_BOARD_GPIO_POWER_LED_RED_OFF);
+            break;
+        case XBH_LED_LIGHT_OFF:
+            s32Ret = setGpioOutputValue(XBH_BOARD_GPIO_POWER_LED_WHITE,XBH_BOARD_GPIO_POWER_LED_WHITE_OFF);
+            s32Ret |= setGpioOutputValue(XBH_BOARD_GPIO_POWER_LED_RED,  XBH_BOARD_GPIO_POWER_LED_RED_OFF);
             break;
         default:
             break;
@@ -388,16 +599,16 @@ XBH_S32 XbhXMA311D2_T2::getLedPwrStatus(XBH_LED_LIGHT_E* enState)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
     XBH_U32 u32GpioValue;
-    s32Ret = getGpioOutputValue(XBH_BOARD_GPIO_SYSTEM_LED_GPIO, &u32GpioValue);
+    s32Ret = getGpioOutputValue(XBH_BOARD_GPIO_POWER_LED_RED, &u32GpioValue);
     if(s32Ret == XBH_SUCCESS)
     {
-        if(u32GpioValue == XBH_BOARD_GPIO_F_LED_R_ON)
+        if(u32GpioValue == XBH_BOARD_GPIO_POWER_LED_RED_ON)
         {
             *enState = XBH_LED_LIGHT_E::XBH_LED_LIGHT_RED;
         }
-        else if (u32GpioValue == XBH_BOARD_GPIO_F_LED_G_ON)
+        else
         {
-            *enState = XBH_LED_LIGHT_E::XBH_LED_LIGHT_GREEN;
+            *enState = XBH_LED_LIGHT_E::XBH_LED_LIGHT_WHITE;
         }
     }
     //XLOGD("getLedPwrStatus : %d\n",u32GpioValue);
@@ -431,6 +642,31 @@ XBH_S32 XbhXMA311D2_T2::setMute(XBH_AUDIO_CHANNEL_E enAudioChannel, XBH_BOOL bEn
     return  s32Ret;
 }
 
+XBH_S32 XbhXMA311D2_T2::getMute(XBH_AUDIO_CHANNEL_E enAudioChannel, XBH_BOOL* bEnable)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_U32 u32GpioValue;
+    switch(enAudioChannel)
+    {
+        case XBH_AUDIO_CHANNEL_SPEAKER:
+            s32Ret = XbhAudioAmplifierManager::getInstance()->getMute(XBH_AUDIO_CHANNEL_STEREO, bEnable);
+            break;
+        case XBH_AUDIO_CHANNEL_HEADPHONE:
+            s32Ret = XbhAudioCodecManager::getInstance()->getHeadphoneMute(bEnable);
+            break;
+        case XBH_AUDIO_CHANNEL_MIC:
+            s32Ret = XbhAudioCodecManager::getInstance()->getMuteMicIn(bEnable);
+            break;
+        case XBH_AUDIO_CHANNEL_SUBWOOFER:
+            s32Ret = XbhAudioAmplifierManager::getInstance()->getMute(XBH_AUDIO_CHANNEL_SUBWOOFER, bEnable);
+            break;
+        default:
+            break;
+    }
+    XLOGD("getMute channel = %d mute = %d ",enAudioChannel, *bEnable);
+    return  s32Ret;
+}
+
 XBH_S32 XbhXMA311D2_T2::getMicDetectStatus(XBH_BOOL* status)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
@@ -455,51 +691,91 @@ XBH_S32 XbhXMA311D2_T2::getAmpInitStatus(XBH_BOOL* value)
 XBH_S32 XbhXMA311D2_T2::setWolEnable(XBH_BOOL bEnable)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
-    XBH_S32 fd = -1;
-    XLOGD("setWolEnable   =  %d ", bEnable);
-    fd = open(RTK8367RB_VB_WOL_DEV, O_WRONLY);
-    if(fd < 0)
+    XBH_U8 u8Data;
+
+    s32Ret = this->XbhAmlogic_311d2::setWolMode(bEnable);
+    if (s32Ret < 0)
     {
-        XLOGE("setWolEnable : open %s failed !!!!",RTK8367RB_VB_WOL_DEV);
+        XLOGE("set wol to bl30 error!!!\n");
         return XBH_FAILURE;
     }
 
-    if(bEnable)
+    u8Data = bEnable;
+    s32Ret = setIICData(XBH_MCU_I2C_CHN, XBH_MCU_I2C_ADDR, CMD_I2C_SET_WAKEUP_WOL, 1, 1, &u8Data);
+    if (s32Ret < 0)
     {
-        XBH_CHAR macaddress[17] = {0};
-        s32Ret = getMacAddress(0, macaddress);
-
-        if(s32Ret == XBH_SUCCESS)
-        {
-            XLOGE("setWolEnable: get Eth MAC %s",macaddress);
-            s32Ret = write(fd, macaddress, sizeof(macaddress));
-        }
-        else
-        {
-            XLOGE("setWolEnable: get Eth MAC failed !!!");
-        }
+        XLOGE("set wol to mcu error!!!\n");
+        return XBH_FAILURE;
     }
-    else
-    {
-        s32Ret = write(fd, "00:00:00:00:00:00", 17);  //disable WOL in phy driver
-    }
-
-    if(s32Ret > 0)
-    {
-        s32Ret = XBH_SUCCESS;
-    }
-    else
-    {
-         XLOGE("setWolEnable: write file failed !!!");
-    }
-
-    close(fd);
-
-    s32Ret = this->XbhAmlogic_311d2::setWolMode(bEnable);
 
     XLOGD("setWolEnable: bEnable = %d, s32Ret = %d",bEnable,s32Ret);
     return s32Ret;
 }
+
+XBH_S32 XbhXMA311D2_T2::setMacAddrToMCU(void)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_U8 mac_addr[6] = {0};
+    XBH_CHAR mac_addr_str[18] = {0};
+
+    getMacAddress(0, mac_addr_str);
+    mac_addr_str[17] = '\0';
+    s32Ret = sscanf(mac_addr_str, "%02x:%02x:%02x:%02x:%02x:%02x", &mac_addr[0], &mac_addr[1], &mac_addr[2], &mac_addr[3], &mac_addr[4], &mac_addr[5]);
+    if(s32Ret != sizeof(mac_addr))
+    {
+        XLOGE("get mac addr error!!! scanf result: %d, mac_addr_str: %s, mac_addr: %02x:%02x:%02x:%02x:%02x:%02x\n",
+            s32Ret, mac_addr_str, mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+        return XBH_FAILURE;
+    }
+    XLOGD("write mac:%02x:%02x:%02x:%02x:%02x:%02x\n", mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3], mac_addr[4], mac_addr[5]);
+
+    s32Ret = setIICData(XBH_MCU_I2C_CHN, XBH_MCU_I2C_ADDR, CMD_I2C_SET_MAC_ADDR, 1, sizeof(mac_addr), mac_addr);
+    if (s32Ret < 0)
+    {
+        XLOGE("set mac addr error!!!\n");
+        return XBH_FAILURE;
+    }
+
+    XLOGD("setMacAddrToMCU: s32Ret = %d", s32Ret);
+    return s32Ret;
+}
+
+XBH_S32 XbhXMA311D2_T2::setNetAddrToMCU(void)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_U8 u8Data[12] = {0};
+    XBH_CHAR propVal[PROPERTY_VALUE_MAX] = {0};
+
+    property_get("vendor.xbh.eth0.ip", propVal, "0.0.0.0");
+    if (sscanf(propVal, "%u.%u.%u.%u", &u8Data[0], &u8Data[1], &u8Data[2], &u8Data[3]) != 4)
+    {
+        XLOGE("set ip error!!!\n");
+        return XBH_FAILURE;
+    }
+
+    property_get("vendor.xbh.eth0.netmask", propVal, "0.0.0.0");
+    if (sscanf(propVal, "%u.%u.%u.%u", &u8Data[4], &u8Data[5], &u8Data[6], &u8Data[7]) != 4)
+    {
+        XLOGE("set mask error!!!\n");
+        return XBH_FAILURE;
+    }
+
+    property_get("vendor.xbh.eth0.gwip", propVal, "0.0.0.0");
+    if (sscanf(propVal, "%u.%u.%u.%u", &u8Data[8], &u8Data[9], &u8Data[10], &u8Data[11]) != 4)
+    {
+        XLOGE("set gateway error!!!\n");
+        return XBH_FAILURE;
+    }
+
+    s32Ret = setIICData(XBH_MCU_I2C_CHN, XBH_MCU_I2C_ADDR, CMD_I2C_SET_NET_ADDR, 1, sizeof(u8Data), u8Data);
+    if (s32Ret < 0)
+    {
+        XLOGE("set mac addr error!!!\n");
+        return XBH_FAILURE;
+    }
+
+    XLOGD("setNetAddrToMCU: s32Ret = %d", s32Ret);
+    return s32Ret;}
 
 XBH_S32 XbhXMA311D2_T2::getVSPort1LinkState(void)
 {   XBH_S32 s32Ret = XBH_FAILURE;
@@ -751,13 +1027,14 @@ XBH_S32 XbhXMA311D2_T2::setWoTStatus(XBH_WAKEUP_E enWakeUpType, XBH_BOOL bEnable
     switch(enWakeUpType)
     {
         case XBH_WAKEUP_ETH:
-            setWolEnable(bEnable);
+            s32Ret = setWolEnable(bEnable);
+            XLOGD("setWolEnable return=%d  ",s32Ret);
         break;
         case XBH_WAKEUP_SOURCE:
             this->XbhAmlogic_311d2::setWosEnable(bEnable);
 
             pu8Data[0] = bEnable;
-            s32Ret |= setIICData(XBH_MCU_I2C_CHN, XBH_MCU_I2C_ADDR, CMD_I2C_SET_WAKEUP_HDMI, 1, 1, pu8Data);
+            s32Ret = setIICData(XBH_MCU_I2C_CHN, XBH_MCU_I2C_ADDR, CMD_I2C_SET_WAKEUP_HDMI, 1, 1, pu8Data);
             XLOGD("set mcu wos status: %d\n", pu8Data[0]);
         break;
         default:
@@ -771,7 +1048,7 @@ XBH_S32 XbhXMA311D2_T2::setWoTStatus(XBH_WAKEUP_E enWakeUpType, XBH_BOOL bEnable
 XBH_S32 XbhXMA311D2_T2::getWoTStatus(XBH_WAKEUP_E enWakeUpType, XBH_BOOL* bEnable)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
-    XLOGD("setWoTStatus enWakeUpType=%d  ",enWakeUpType);
+    XLOGD("getWoTStatus enWakeUpType=%d  ",enWakeUpType);
     switch(enWakeUpType)
     {
         case XBH_WAKEUP_ETH:
@@ -842,29 +1119,86 @@ XBH_S32 XbhXMA311D2_T2::setOnStop()
     XBH_S32 s32Ret = XBH_FAILURE;
     XBH_CHAR sWolStatus[PROPERTY_VALUE_MAX];
     XBH_MCU_I2CBUFFDEF_S pI2cBuff;
+    std::string isWakeupEnableTCP;
     XLOGD("---- onStop ----");
+
+    #ifdef XBH_BOARD_GPIO_RS232_TX_EN
+    XBH_BOOL bUartDebugEnable = XBH_FALSE;
+    this->XbhAmlogic_311d2::getDebugEnable(&bUartDebugEnable);
+    //don't disable the RS232 TX if uart Debug is enabled, then can get the kernel log from the console
+    if(!bUartDebugEnable)
+    {
+         s32Ret = setGpioOutputValue(XBH_BOARD_GPIO_RS232_TX_EN, XBH_BOARD_GPIO_RS232_TX_EN_OFF);
+         XLOGD("%s: disable RS232 TX %s", __func__, (s32Ret == 0)?"ok":"fail");
+    }
+
+    #endif
+
     XBH_BOOL wot_enable;
     s32Ret = getWoTStatus(XBH_WAKEUP_SOURCE, &wot_enable);
     if(wot_enable) {
         XbhHdmiSwitchManager::getInstance()->setSpecificMode(XBH_UPDATE_FRONT_GSV2712);
+        XbhUsbc2HdmiManager::getInstance()->setSpecificMode(XBH_SOURCE_USBC1);
     }
+    s32Ret = setIICData(XBH_MCU_I2C_CHN, XBH_MCU_I2C_ADDR, CMD_I2C_SET_WAKEUP_HDMI, 1, 1, &wot_enable);
 
     //red led on, and white led off
     s32Ret = setGpioOutputValue(XBH_BOARD_GPIO_POWER_LED_RED,   XBH_BOARD_GPIO_POWER_LED_RED_ON);
     s32Ret = setGpioOutputValue(XBH_BOARD_GPIO_POWER_LED_WHITE, XBH_BOARD_GPIO_POWER_LED_WHITE_OFF);
 
-    /*通知MCU SOC已待机*/
-    pI2cBuff.cmd = CMD_I2C_SOC_POWER_MODE;
-    pI2cBuff.len = 8;
-    pI2cBuff.data[0] = XBH_POWERMODE_STANDBY;
-    s32Ret = setIICData(XBH_MCU_I2C_CHN, XBH_MCU_I2C_ADDR, pI2cBuff.cmd, 0x01, pI2cBuff.len, pI2cBuff.data);
+    //should close these MCU GPIO when standby
+    s32Ret = setGpioOutputValue(XBH_BOARD_GPIO_U3RE_EN3, XBH_BOARD_GPIO_U3RE_EN3_OFF);
+    if (s32Ret < 0) {
+        XLOGE("XBH_BOARD_GPIO_U3RE_EN3 set gpio val fail\n");
+    }
+
+    s32Ret = setGpioOutputValue(XBH_BOARD_GPIO_USB30_PWREN2, XBH_BOARD_GPIO_USB30_PWREN2_OFF);
+    if (s32Ret < 0) {
+        XLOGE("XBH_BOARD_GPIO_USB30_PWREN2 set gpio val fail\n");
+    }
+
+    s32Ret = setGpioOutputValue(XBH_BOARD_GPIO_POWER_DET_PWR, XBH_BOARD_GPIO_POWER_DET_PWR_OFF);
+    if (s32Ret < 0) {
+        XLOGE("XBH_BOARD_GPIO_POWER_DET_PWR set gpio val fail\n");
+    }
+
+    s32Ret = setGpioOutputValue(XBH_BOARD_GPIO_CAM_PWR, XBH_BOARD_GPIO_CAM_PWR_OFF);
+    if (s32Ret < 0) {
+        XLOGE("XBH_BOARD_GPIO_POWER_DET_PWR set gpio val fail\n");
+    }
     property_get("persist.vendor.xbh.wol.enable", sWolStatus, "false");
     if(strncmp(sWolStatus, "true",4) == 0) {
         setWolEnable(XBH_TRUE);
+        s32Ret |= setMacAddrToMCU();
+        s32Ret |= setNetAddrToMCU();
+
+        /*通知MCU 是否支持TCP IP 唤醒*/
+        pI2cBuff.cmd = CMD_I2C_SET_WAKEUP_TCPIP;
+        pI2cBuff.len = 1;
+        if (mSystemControlClient->getBootEnv("ubootenv.var.tcpipControlEnable", isWakeupEnableTCP)
+            && (isWakeupEnableTCP.compare("1") == 0))
+        {
+            pI2cBuff.data[0] = 1;
+            s32Ret |= setIICData(XBH_MCU_I2C_CHN, XBH_MCU_I2C_ADDR, pI2cBuff.cmd, 0x01, pI2cBuff.len, pI2cBuff.data);
+        }
+        else
+        {
+            pI2cBuff.data[0] = 0;
+            s32Ret |= setIICData(XBH_MCU_I2C_CHN, XBH_MCU_I2C_ADDR, pI2cBuff.cmd, 0x01, pI2cBuff.len, pI2cBuff.data);
+        }
     } else {
         setWolEnable(XBH_FALSE);
     }
 
+#ifdef XBH_BOARD_ADC_PIR_CHAN
+    set_pir_work_time();
+#endif
+
+    /*通知MCU SOC已待机*/
+    pI2cBuff.cmd = CMD_I2C_SOC_POWER_MODE;
+    pI2cBuff.len = 1;
+    pI2cBuff.data[0] = SOC_STATUS_STANDBY; // 待机
+    s32Ret |= setIICData(XBH_MCU_I2C_CHN, XBH_MCU_I2C_ADDR, pI2cBuff.cmd, 0x01, pI2cBuff.len, pI2cBuff.data);
     return  s32Ret;
 }
 
@@ -1010,11 +1344,25 @@ XBH_S32 XbhXMA311D2_T2::dumpEdid(XBH_SOURCE_E idx)
     return s32Ret;
 }
 
+XBH_S32 XbhXMA311D2_T2::setLineOutMode(XBH_LINEOUT_MODE_E enLineOutMode)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    s32Ret = XbhAudioCodecManager::getInstance()->setLineOutMode(enLineOutMode);
+    return  s32Ret;
+}
+
+XBH_S32 XbhXMA311D2_T2::getLineOutMode(XBH_LINEOUT_MODE_E* enLineOutMode)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    s32Ret = XbhAudioCodecManager::getInstance()->getLineOutMode(enLineOutMode);
+    return  s32Ret;
+}
+
 XBH_S32 XbhXMA311D2_T2::setVgaEdidI2cData(XBH_U32 u32RegAddr, const XBH_U8* u8Data, XBH_U32 u32Length) 
 {
     XBH_S32 s32Ret = XBH_FAILURE;
 
-    I2CSimulator* pSimulator = I2CSimulator::getInstance(XBH_BOARD_GPIO_VGA_EEPROM_SDA, XBH_BOARD_GPIO_VGA_EEPROM_SCL);
+    I2CSimulator* pSimulator = I2CSimulator::getInstance(XBH_BOARD_GPIO_VGA_EEPROM_SDA, XBH_BOARD_GPIO_VGA_EEPROM_SCL, XBH_EEPROM_ADDR);
     if (pSimulator == nullptr) {
         XLOGD("Failed to create I2CSimulator instance\n");
         return XBH_FAILURE;
@@ -1029,7 +1377,7 @@ XBH_S32 XbhXMA311D2_T2::getVgaEdidI2cData(XBH_U32 u32RegAddr, XBH_U8* u8Data, XB
 {
     XBH_S32 s32Ret = XBH_FAILURE;
 
-    I2CSimulator* pSimulator = I2CSimulator::getInstance(XBH_BOARD_GPIO_VGA_EEPROM_SDA, XBH_BOARD_GPIO_VGA_EEPROM_SCL);
+    I2CSimulator* pSimulator = I2CSimulator::getInstance(XBH_BOARD_GPIO_VGA_EEPROM_SDA, XBH_BOARD_GPIO_VGA_EEPROM_SCL, XBH_EEPROM_ADDR);
     if (pSimulator == nullptr) {
         XLOGD("Failed to create I2CSimulator instance\n");
         return XBH_FAILURE;
@@ -1073,6 +1421,8 @@ XBH_BOOL XbhXMA311D2_T2::isRearTypecInDetChanged()
 {
     XBH_S32 s32Ret = XBH_FAILURE;
     s32Ret = getGpioInputValue(XBH_BOARD_GPIO_USBC_1_DET, (XBH_U32 *)&curRearTypecDetStatus);
+
+
     //XLOGD("curRearTypecDetStatus pdPowerConfig is %d", curRearTypecDetStatus);
     if(curRearTypecDetStatus != preRearTypecDetStatus)
     {
@@ -1082,12 +1432,23 @@ XBH_BOOL XbhXMA311D2_T2::isRearTypecInDetChanged()
         if(curRearTypecDetStatus == REAR_TYPEC_UNPLUG)
         {
             XBH_U8 data = PD_CHARGE_POWER_4P5W;
+            XBH_CHAR propVal[PROPERTY_VALUE_MAX] = {0};
             XBH_S32 ret = setIICData(XBH_BOARD_I2C_GSV2202E_I2C_NUM, XBH_BOARD_I2C_GSV2202E_I2C_ADDR, REG_PD_CHARGE_POWER, 2, 1, &data);
-            XLOGD("rear typec unplug, pdPowerConfig set PD to 4.5W, ret = %d",ret);
+            XLOGD("rear typec unplug, pdPowerConfig set PD to 4.5W and saved OTG mode: %d, ret = %d", pre_HostDeviceStatus, ret);
+
+            // 拔出时恢复USB-C IN工作模式
+            this->XbhAmlogic_311d2::setHostOrDeviceStatus(pre_HostDeviceStatus);
         }
         else
         {
-             XLOGD("rear typec plugin pdPowerConfig");
+            XLOGD("rear typec plugin pdPowerConfig");
+
+            // 插入前保存当前的USB-C IN状态  HOST/DEVICE
+            XBH_CHAR s8Buff[PROPERTY_VALUE_MAX] = {0};
+            this->XbhAmlogic_311d2::getHostOrDeviceStatus((XBH_S32 *)s8Buff);
+            pre_HostDeviceStatus = (XBH_S32)s8Buff[0]; // 保存原始状态
+            // USB-C IN插入时强制设置为 DEVICE 模式
+            this->XbhAmlogic_311d2::setHostOrDeviceStatus(XBH_DEVICE_MODE);
         }
 
 
@@ -1294,6 +1655,16 @@ void XbhXMA311D2_T2::run(const void* arg)
     usleep(80 * 1000);
 }
 
+XBH_S32 XbhXMA311D2_T2::initHdmiCecPhysicalAddr()
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    s32Ret |= XbhHdmiSwitchManager::getInstance()->setPhysicalAddr(XBH_UPDATE_BOARD_GSV2705_1, XBH_HDMI_RXA, XBH_HDMI5_CEC_PHYSICAL_ADDR);// ops
+    s32Ret |= XbhHdmiSwitchManager::getInstance()->setPhysicalAddr(XBH_UPDATE_BOARD_GSV2705_1, XBH_HDMI_RXC, XBH_HDMI1_CEC_PHYSICAL_ADDR);// to Fhdmi
+    s32Ret |= XbhHdmiSwitchManager::getInstance()->setPhysicalAddr(XBH_UPDATE_BOARD_GSV2705_1, XBH_HDMI_RXD, XBH_HDMI4_CEC_PHYSICAL_ADDR);//hdmi4
+    s32Ret |= XbhHdmiSwitchManager::getInstance()->setPhysicalAddr(XBH_UPDATE_BOARD_GSV2705_1, XBH_HDMI_RXB, XBH_HDMI6_CEC_PHYSICAL_ADDR);//vga-usbc
+    return s32Ret;
+}
+
 XbhXMA311D2_T2 *XbhXMA311D2_T2::getInstance()
 {
     if (!mInstance)
@@ -1305,4 +1676,205 @@ XbhXMA311D2_T2 *XbhXMA311D2_T2::getInstance()
         }
     }
     return mInstance;
+}
+
+XBH_S32 XbhXMA311D2_T2::setErrorDetectState(XBH_BOOL bEnable, XBH_U32 enDetectType)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_U8  pu8Data[3] = {0};
+    pu8Data[0] = bEnable;
+    pu8Data[1] = (enDetectType & 0x00ff);
+    pu8Data[2] = ((enDetectType >> 8) & 0x00ff);
+    s32Ret = setIICData(XBH_MCU_I2C_CHN, XBH_MCU_I2C_ADDR, CMD_I2C_SET_ERR_DET_STATE, 1, 3, pu8Data);
+    XLOGD("setErrorDetectState: %d, enDetectType: 0x%04x\n", bEnable, enDetectType);
+    return s32Ret;
+}
+
+XBH_S32 XbhXMA311D2_T2::getErrorDetectState(XBH_BOOL* bEnable, XBH_U32* enDetectType)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_U8  pu8Data[3] = {0};
+    s32Ret = getIICData(XBH_MCU_I2C_CHN, XBH_MCU_I2C_ADDR, CMD_I2C_GET_ERR_DET_STATE, 1, 3, pu8Data);
+    *bEnable = pu8Data[0];
+    *enDetectType = pu8Data[1] | (pu8Data[2] << 8);
+    XLOGD("getErrorDetectState: %d, enDetectType: 0x%04x\n", *bEnable, *enDetectType);
+    return s32Ret;
+}
+
+XBH_S32 XbhXMA311D2_T2::getErrorCode(XBH_U32* u32ErrorCode)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_U8  pu8Data[3] = {0};
+    s32Ret = getIICData(XBH_MCU_I2C_CHN, XBH_MCU_I2C_ADDR, CMD_I2C_READ_ERROR_CODE, 1, 2, pu8Data);
+    *u32ErrorCode = pu8Data[0] | (pu8Data[1] << 8);
+    XLOGD("getErrorCode: 0x%04x\n", *u32ErrorCode);
+    return s32Ret;
+}
+
+XBH_S32 XbhXMA311D2_T2::clearErrorCode(void)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    s32Ret = setIICData(XBH_MCU_I2C_CHN, XBH_MCU_I2C_ADDR, CMD_I2C_CLEAR_ERROR_RECORDS, 1, 0, NULL);
+    XLOGD("clearErrorCode, ret = %d\n", s32Ret);
+    return s32Ret;
+}
+
+XBH_S32 XbhXMA311D2_T2::getWakeUpReason(XBH_WAKEUP_S *stWake)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    std :: string result;
+    std :: string data;
+    std :: string wakeup;
+    const std :: string strWakeupReason = "/sys/class/cec/wake_up_reason";
+    const std :: string strWakeupData = "/sys/class/cec/wake_up_data";
+    const std :: string strWakeup = "/sys/class/cec/wake_up";
+    XBH_S32 s32WakeupReason = 0;
+    XBH_S32 s32WakeupData = 0;
+    XBH_CEC_WAKEUP_S stWakeup;
+
+    mSystemControlClient->readSysfs(strWakeupReason, result);
+    if(!result.empty())
+    {
+        s32WakeupReason = strtol(result.c_str(), XBH_NULL, 16);
+        s32WakeupReason = s32WakeupReason & WAKEUP_REASON_MASK;
+    }
+
+    XLOGD("getWakeUpReason-->s32WakeupReason:%d\n", s32WakeupReason);
+
+    switch(s32WakeupReason)
+    {
+        case REMOTE_WAKEUP:
+            stWake->enWakeup = XBH_WAKEUP_IR;
+            break;
+        case POWER_KEY_WAKEUP:
+            stWake->enWakeup = XBH_WAKEUP_KEYPAD;
+            break;
+        case RTC_WAKEUP:
+            stWake->enWakeup = XBH_WAKEUP_RTC;
+            break;
+        case UART_WAKEUP:
+            stWake->enWakeup = XBH_WAKEUP_UART;
+            break;
+        case WIFI_WAKEUP:
+            stWake->enWakeup = XBH_WAKEUP_WIFI;
+            break;
+        case CEC_WAKEUP:
+            stWake->enWakeup = XBH_WAKEUP_CEC;
+            stWakeup.wk_logic_addr = 0;
+            stWakeup.wk_phy_addr = 0;
+            stWakeup.wk_port_id = 0;
+            mSystemControlClient->readSysfs(strWakeup, wakeup);
+            if(!wakeup.empty())
+            {
+                int cecWakeupPort = strtol(wakeup.c_str(), XBH_NULL, 16);
+                memcpy(&stWakeup, &cecWakeupPort, sizeof(stWakeup));
+            }
+            if (stWakeup.wk_phy_addr == 0x1000)
+            {
+                stWake->enSrc = XBH_SOURCE_F_HDMI1;
+            }
+            else if (stWakeup.wk_phy_addr == 0x2000)
+            {
+                stWake->enSrc = XBH_SOURCE_HDMI1;
+            }
+            else if (stWakeup.wk_phy_addr == 0x3000)
+            {
+                stWake->enSrc = XBH_SOURCE_HDMI2;
+            }
+            else if (stWakeup.wk_phy_addr == 0x4000)
+            {
+                stWake->enSrc = XBH_SOURCE_HDMI3;
+            }
+            else
+            {
+                stWake->enWakeup = XBH_WAKEUP_BUTT;
+            }
+            break;
+        case XBH_EXT_WAKEUP_REASON:
+            {
+                mSystemControlClient->readSysfs(strWakeupData, data);
+                if(!data.empty())
+                {
+                    s32WakeupData = strtol(data.c_str(), XBH_NULL, 16);
+                }
+                switch (s32WakeupData)
+                {
+                    case XBH_EXT_WAKEUP_REASON_SOURCE_VGA:
+                        stWake->enWakeup = XBH_WAKEUP_SOURCE;
+                        stWake->enSrc = XBH_SOURCE_VGA1;
+                        break;
+                    case XBH_EXT_WAKEUP_REASON_SOURCE_HDMI1:
+                        stWake->enWakeup = XBH_WAKEUP_SOURCE;
+                        stWake->enSrc = XBH_SOURCE_HDMI1;
+                        break;
+                    case XBH_EXT_WAKEUP_REASON_SOURCE_HDMI2:
+                        stWake->enWakeup = XBH_WAKEUP_SOURCE;
+                        stWake->enSrc = XBH_SOURCE_HDMI2;
+                        break;
+                    case XBH_EXT_WAKEUP_REASON_SOURCE_F_HDMI:
+                        stWake->enWakeup = XBH_WAKEUP_SOURCE;
+                        stWake->enSrc = XBH_SOURCE_F_HDMI1;
+                        break;
+                    case XBH_EXT_WAKEUP_REASON_SOURCE_TYPEC1:
+                        stWake->enWakeup = XBH_WAKEUP_SOURCE;
+                        stWake->enSrc = XBH_SOURCE_USBC1;
+                        break;
+                    case XBH_EXT_WAKEUP_REASON_SOURCE_TYPEC2:
+                        stWake->enWakeup = XBH_WAKEUP_SOURCE;
+                        stWake->enSrc = XBH_SOURCE_F_USBC1;
+                        break;
+                    case XBH_EXT_WAKEUP_REASON_MCU:
+                        stWake->enWakeup = XBH_WAKEUP_SOURCE;
+                        //stWake->enSrc = XBH_SOURCE_DP1;
+                        getMcuWakeUpInfo(stWake);
+                        XLOGD("XBH_EXT_WAKEUP_REASON_MCU enWakeup::%d enSrc:%d Value:%d\n",stWake->enWakeup,stWake->enSrc,stWake->u32Value);
+                        break;
+                    case XBH_EXT_WAKEUP_REASON_UART:
+                        stWake->enWakeup = XBH_WAKEUP_UART;
+                        break;
+                    case XBH_EXT_WAKEUP_REASON_PIR:
+                        stWake->enWakeup = XBH_WAKEUP_PIR;
+                        break;
+                    case XBH_EXT_WAKEUP_REASON_NFC:
+                        stWake->enWakeup = XBH_WAKEUP_NFC;
+                        break;
+                    default:
+                        s32Ret = XBH_FAILURE;
+                        XLOGE("getWakeUpData fail %s\n",s32WakeupData);
+                        break;
+                }
+            }
+            break;
+            default:
+                s32Ret = XBH_FAILURE;
+                XLOGE("getWakeUpReason fail %d\n",s32WakeupReason);
+                break;
+    }
+    XLOGD("getWakeUpReason end %d %d %04x", stWake->enWakeup, stWake->enSrc, stWake->u32Value);
+
+    return s32Ret;
+}
+
+XBH_S32 XbhXMA311D2_T2::getMcuWakeUpInfo(XBH_WAKEUP_S *stWake)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    XBH_U8  pu8Data[10] = {0};
+
+    s32Ret = this->XbhAmlogic_311d2::getIICData(XBH_MCU_I2C_CHN, XBH_MCU_I2C_ADDR, CMD_I2C_GET_WAKEUP_INFO, 1, 10, pu8Data);
+
+    stWake->enWakeup = (XBH_WAKEUP_E)pu8Data[0];
+    stWake->u32Value = (uint16_t)(pu8Data[3] * 256 | pu8Data[2]) & 0xffff;
+
+    if (XBH_WAKEUP_SOURCE == stWake->enWakeup)
+    {
+        stWake->enSrc = (XBH_SOURCE_E)pu8Data[1];
+    }
+    else
+    {
+        XLOGD("unknown XBH_WAKEUP_E type!");
+    }
+
+    XLOGD("getMcuWakeUpInfo end %d %d %04x", stWake->enWakeup, stWake->enSrc, stWake->u32Value);
+
+    return s32Ret;
 }

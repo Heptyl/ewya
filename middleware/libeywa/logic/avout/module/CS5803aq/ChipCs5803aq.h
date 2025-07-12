@@ -13,6 +13,9 @@
 #define CS5803AQ_DISABLE_SPI_MODE    (0X10004F)  //write 0X00
 #define CS5803AQ_EXTERNAL_FLASH      (0X200030)  //write 0X11
 
+//Chip Device_Address
+#define ASL_DEV_I2C_ADDRESS 0x6A  //ASL DEV 
+#define SPI_Address_Length 3
 
 class ChipCS5803AQ : public XbhMWThread, public XbhAVOutInterface
 {
@@ -54,12 +57,24 @@ public:
     XBH_S32 getChipExist(XBH_BOOL* enable);
 
 private:
-    //i2c
-    XBH_S32 i2c_data_read(unsigned int u32RegAddr, unsigned int RegAddrLen, unsigned char *p_data, unsigned int data_len);
-    XBH_S32 i2c_data_write(unsigned char u8RegAddr, unsigned char reg_value);
-    XBH_S32 i2c_data_write_nbytes(unsigned int u32RegAddr, unsigned int RegAddrLen, unsigned char *p_data, unsigned int data_len);
     //command
+    XBH_S32 ASL_I2C2_Write_Reg(XBH_U32 BLOCK_ID, XBH_U8 wData);  
+    XBH_S32 ASL_I2C2_Read_Reg(XBH_U32 BLOCK_ID, XBH_U8 *pData);  
+    XBH_S32 ASL_I2C2_Write_Reg_Len(XBH_U32 BLOCK_ID, XBH_U8 *data, XBH_U8 Num);  
+    XBH_S32 ASL_I2C2_Read_Reg_Len(XBH_U32 BLOCK_ID, XBH_U8 *data, XBH_U8 Num);  
+
+    XBH_BOOL I2C_Wait_RW_DONE(XBH_U32 Timout);
+    XBH_BOOL I2C_write_done_check(XBH_U8 Timeout);
+    XBH_BOOL SPI_Flash_Protect_I2C(XBH_BOOL Protect_EN);
+    void I2C_Flash_Erase(XBH_U32 StartAddr);
+    XBH_BOOL I2C2_SPI_Flash_Read(XBH_U32 ReadAddr,XBH_U8 *pBuffer,XBH_U32 NumToRead);
+    XBH_BOOL I2C2_SPI_Flash_Write(XBH_U32 WriteAddr,XBH_U8 *pBuffer,XBH_U32 NumByteToWrite);
+    void Erase_Flash_init_I2C(XBH_U32 EAddr);
+    void Erase_SPIFlash_I2C(XBH_U32 CurAddr);
+
     XBH_S32 open_upgrade_file(const char *upgrade_file_path);
+    XBH_BOOL chip_init_5803();
+    XBH_BOOL spi_flash_update_5803();
 
 public:
     enum XBH_CS5803_STATE_E {
@@ -79,11 +94,18 @@ private:
     XBH_S32 mPLevel;
     XBH_S32 mRGpio;
     XBH_S32 mRLevel;
+    
+    XBH_U32 Erased_Address_I2C=0; //Erased address+1
+    XBH_U32 Each_Time_Erase_Size=0x1000; //erase block size 
+    XBH_U8 wdata[16];
+    XBH_U32 mOffset=0;
+    XBH_BOOL mUpdateStart;
 
 //---------------- custom device interface end ----------------
 private:
     void run(const void* arg);
     static XbhMutex mLock;
+    
 };
 
 #endif //XBH_CHIP_CS5803AQ_H

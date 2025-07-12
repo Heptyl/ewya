@@ -165,7 +165,7 @@ HI_VOID INIProvider::LoadIniFile()
         return;
     }
     mIniPathVec.push_back(string(iniPath));
-#if 0
+
     // get the path of db.ini
     iniPath = GetCfgFile(INI_DB_INI_PATH, filePath);
     LOGI("hi_get_one_cfg_file. dbIniPath:%s", iniPath);
@@ -183,7 +183,7 @@ HI_VOID INIProvider::LoadIniFile()
         return;
     }
     mIniPathVec.push_back(string(iniPath));
-#endif
+
     // load the ini files
     std::vector<string>::iterator itVec = mIniPathVec.begin();
     for (; itVec != mIniPathVec.end(); itVec++) {

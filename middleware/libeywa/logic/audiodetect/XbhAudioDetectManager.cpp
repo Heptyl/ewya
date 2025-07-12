@@ -62,73 +62,20 @@ XBH_S32 XbhAudioDetectManager::processHpDet()
     if(status != mHpConnectStatus)
     {
         XBH_BOOL spkLineoutSyncFlag = property_get_bool("persist.vendor.xbh.spk.lineout.sync", false);
-        //SMART需求：扬声器,耳机可独立开关
-        XBH_BOOL disableDeviceAloneFlag = property_get_bool("persist.vendor.xbh.disable.device.alone", false);
-        XBH_BOOL selectSpeakerDisabled = property_get_bool("persist.vendor.xbh.select.speaker.disabled", false);
-        XBH_BOOL selectLineoutDisabled = property_get_bool("persist.vendor.xbh.select.lineout.disabled", false);
-        XBH_BOOL isSpeakerMute = XBH_FALSE;
-        XBH_BOOL isLineoutMute = XBH_FALSE;
-
-        XbhService::getPlatformInterface()->getMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_SPEAKER, &isSpeakerMute);
-        XbhService::getPlatformInterface()->getMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_HEADPHONE, &isLineoutMute);
-        XLOGD(" processHpDet status = %d, spkLineoutSyncFlag=%d, disableDeviceAloneFlag=%d, selectSpeakerDisabled=%d, selectLineoutDisabled=%d, isSpeakerMute=%d, isLineoutMute=%d",
-                status,spkLineoutSyncFlag, disableDeviceAloneFlag, selectSpeakerDisabled, selectLineoutDisabled, isSpeakerMute, isLineoutMute);
+        XLOGD(" processHpDet status = %d ,spkLineoutSyncFlag=%d", status,spkLineoutSyncFlag);
         mHpConnectStatus = status;
         if(status)
         {
             if (enAudioOutput == XBH_AUDIO_OUTPUT_DET)
             {
-                if (disableDeviceAloneFlag)
-                {
-                    //if select lineout disabled, mute lineout if it unmute;
-                    //if select lineout enabled, unmute lineout if it mute
-                    if (selectLineoutDisabled)
-                    {
-                        if (!isLineoutMute)
-                        {
-                            XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_HEADPHONE, XBH_TRUE);
-                        }
-                    }
-                    else
-                    {
-                        if (isLineoutMute)
-                        {
-                            XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_HEADPHONE, XBH_FALSE);
-                        }
-                    }
-                    //if select speaker disabled, mute speaker if it unmute
-                    //if select speaker enalbed, unute speaker if it mute
-                    if (selectSpeakerDisabled)
-                    {
-                        if (!isSpeakerMute)
-                        {
-                            usleep(500 * 1000); //500ms
-                            XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_SPEAKER, XBH_TRUE);
-                        }
-                    }
-                    else
-                    {
-                        if (isSpeakerMute)
-                        {
-                            usleep(500 * 1000); //500ms
-                            XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_SPEAKER, XBH_FALSE);
-                        }
-                    }
+                //hp is plugin, so mute speaker
+                if(spkLineoutSyncFlag){
+                    XLOGD("processHpDet no need mute speaker!!!");
+                }else{
+                    XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_SPEAKER, XBH_TRUE);
                 }
-                else
-                {
-                    //hp is plugin, so mute speaker
-                    if (spkLineoutSyncFlag)
-                    {
-                        XLOGD("processHpDet no need mute speaker!!!");
-                    }
-                    else
-                    {
-                        XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_SPEAKER, XBH_TRUE);
-                    }
-                    usleep(500 * 1000); //500ms
-                    XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_HEADPHONE, XBH_FALSE);
-                }
+                usleep(500 * 1000); //500ms
+                XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_HEADPHONE, XBH_FALSE);
             }
             //发送回调消息到中间件
             MsgPublisher().PostMsg(XBH_HP_EVT_PLUGIN, XBH_NULL, 0);
@@ -137,36 +84,10 @@ XBH_S32 XbhAudioDetectManager::processHpDet()
         {
             if (enAudioOutput == XBH_AUDIO_OUTPUT_DET)
             {
-                if (disableDeviceAloneFlag)
-                {
-                    //拔掉line out/hp 后就给lineout 静音
-                    XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_HEADPHONE, XBH_TRUE);
-                    //if select speaker disabled, mute speaker if it unmute
-                    //if select speaker enalbed, unute speaker if it mute
-                    if (selectSpeakerDisabled)
-                    {
-                        if (!isSpeakerMute)
-                        {
-                            usleep(500 * 1000); //500ms
-                            XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_SPEAKER, XBH_TRUE);
-                        }
-                    }
-                    else
-                    {
-                        if (isSpeakerMute)
-                        {
-                            usleep(500 * 1000); //500ms
-                            XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_SPEAKER, XBH_FALSE);
-                        }
-                    }
-                }
-                else
-                {
-                    //hp is plugout, so unmute speaker
-                    XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_HEADPHONE, XBH_TRUE);
-                    usleep(500 * 1000); //500ms
-                    XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_SPEAKER, XBH_FALSE);
-                }
+                //hp is plugout, so unmute speaker
+                XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_HEADPHONE, XBH_TRUE);
+                usleep(500 * 1000); //500ms
+                XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_SPEAKER, XBH_FALSE);
             }
             //发送回调消息到中间件
             MsgPublisher().PostMsg(XBH_HP_EVT_PLUGOUT, XBH_NULL, 0);

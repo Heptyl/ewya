@@ -408,6 +408,12 @@ public:
     XBH_S32 getHdmiRxLockStatus(XBH_BOOL* lock);
     //override
     XBH_S32 setOnStop();
+    //override
+    XBH_S32 prepareIncreaseBinUpgrade();
+    //override
+    XBH_S32 getEthPlugStatus(XBH_BOOL* bEnable);
+    //override
+    XBH_S32 setVgaEdid(const XBH_CHAR* strPath, XBH_SOURCE_E idx);
 
 public:
     XBH_S32 readAndUpdateEdidBinFileByEdidType(int dev, const char* edidBinFilePath, int port);
@@ -437,6 +443,8 @@ private:
     XBH_S32 setcheckColorTempValue(XBH_BOOL CheckColorTemp);
     XBH_S32 getcheckColorTempValue(XBH_BOOL *CheckColorTemp);
     XBH_S32 checkColorTempValue(XBH_GAIN_OFFSET_DATA_S* data);
+    XBH_S32 deleteFile(const std::string& path);
+    XBH_S32 deleteDirectorySubfiles(const std::string& dir_path);
 
 private:
     XBH_S32 mGpioFd = -1;

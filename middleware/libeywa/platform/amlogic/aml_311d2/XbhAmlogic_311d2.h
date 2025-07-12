@@ -91,6 +91,12 @@ struct XBH_CEC_WAKEUP_S {
 #define NTC_ADC_100K_0402_MIN -40
 #define NTC_ADC_100K_0402_LEN 141
 
+#define FILEPATH_MAX_LENGTH     128
+#define XBH_BURN_HDCP_RX22 "persist.vendor.xbh.burn.hdcprx22"
+#define XBH_BURN_HDCP_RX14 "persist.vendor.xbh.burn.hdcprx14"
+#define XBH_BURN_HDCP_TX14 "persist.vendor.xbh.burn.hdcptx14"
+#define XBH_BURN_HDCPKEY_PATH "vendor.xbh.burn.hdcpkey.path"
+
 const XBH_U32 NTC_ADC_100K_0402[NTC_ADC_100K_0402_LEN] =
 {
     4054000, 3781000, 3528000, 3294000, 3077000, 2875000, 2688000, 2514000, 2353000, 2203000,  //-40 ~ -31
@@ -126,6 +132,8 @@ const XBH_U32 NTC_ADC_100K_0402[NTC_ADC_100K_0402_LEN] =
 #define ETH_PHY_GPIO                              12
 #define VAD_WAKEUP                                13
 #define XBH_EXT_WAKEUP_REASON                     14
+#define UART_WAKEUP                               19
+#define WAKEUP_REASON_MASK                        0x0F
 
 /*对XBH_EXT_WAKEUP_REASON的补充，amlogic最大支持16个唤醒reason,通过拓展一个数据来达到朗国自己新增的唤醒源*/
 #define XBH_EXT_WAKEUP_REASON_SOURCE_VGA           5
@@ -236,6 +244,10 @@ public:
     //override
     XBH_S32 getSn(XBH_CHAR* strSn);
     //override
+    XBH_S32 setAudioOutput(XBH_AUDIO_OUTPUT_E enAudioOutput);
+    //override
+    XBH_S32 getAudioOutput(XBH_AUDIO_OUTPUT_E *enAudioOutput);
+    //override
     XBH_S32 setPixelShiftEnable(XBH_BOOL value);
     //override
     XBH_S32 getPixelShiftEnable(XBH_BOOL* value);
@@ -250,11 +262,85 @@ public:
     //override
     XBH_S32 getAttentionKeyStatus(XBH_BOOL* enable);
     //override
+    XBH_S32 setHdcpKeyName(const XBH_CHAR* pBuff, XBH_HDCP_TYPE_E type);
+    //override
     XBH_S32 getHdcpKeyName(XBH_HDCP_TYPE_E type, XBH_CHAR* strHdcpFileName);
+    //override
+    XBH_S32 setHdcpKey(const XBH_CHAR* strPath, XBH_HDCP_TYPE_E type);
     //override
     XBH_S32 setColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data);
     //override
     XBH_S32 getColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data);
+    //override
+    XBH_S32 setNR(XBH_LEVEL_E enNrLevel);
+    //override
+    XBH_S32 getNR(XBH_LEVEL_E *enNrLevel);
+    //override
+    XBH_S32 setMultiUser(const XBH_CHAR* status);
+    //override
+    XBH_S32 getMultiUser(XBH_CHAR* status);
+    //override
+    XBH_S32 setVSPage(const XBH_CHAR* status);
+    //override
+    XBH_S32 getVSPage(XBH_CHAR* status);
+    //override
+    XBH_S32 setCustomSKU(const XBH_CHAR* status);
+    //override
+    XBH_S32 getCustomSKU(XBH_CHAR* status);
+    //override
+    XBH_S32 setBootMode(const XBH_CHAR* status);
+    //override
+    XBH_S32 getBootMode(XBH_CHAR* status);
+    //override
+    XBH_S32 getMicLicenseState(XBH_S32* status);
+    //override
+    XBH_S32 getHostOrDeviceStatus(XBH_S32* type);
+    //override
+    XBH_S32 setHostOrDeviceStatus(XBH_S32 type);
+    //override
+    XBH_S32 setContrast(XBH_U32 u32Value);
+    //override
+    XBH_S32 getContrast(XBH_U32 *u32Value);
+    //override
+    XBH_S32 setBrightness(XBH_U32 u32Value);
+    //override
+    XBH_S32 getBrightness(XBH_U32 *u32Value);
+    //override
+    XBH_S32 setHue(XBH_U32 u32Value);
+    //override
+    XBH_S32 getHue(XBH_U32 *u32Value);
+    //override
+    XBH_S32 setSharpness(XBH_U32 u32Value);
+    //override
+    XBH_S32 getSharpness(XBH_U32 *u32Value);
+    //override
+    XBH_S32 setSaturation(XBH_U32 u32Value);
+    //override
+    XBH_S32 getSaturation(XBH_U32 *u32Value);
+    //override
+    XBH_S32 getHallSensorValue(XBH_S32* s32Value);
+    //override
+    XBH_S32 getArcDetectStatus(XBH_BOOL* status);
+    //override
+    XBH_S32 ProcessTypeBHotplug(XBH_SOURCE_E src);
+    //override
+    XBH_S32 ProcessTypeCHotplug(XBH_SOURCE_E src);
+    //override
+    XBH_S32 setWatchDogManualModeEnable(XBH_BOOL bEnable);
+    //override
+    XBH_S32 getWatchDogManualModeEnable(XBH_BOOL *bEnable);
+    //override
+    XBH_S32 getEthPlugStatus(XBH_BOOL* bEnable);
+    //override
+    XBH_S32 setMcuFattMode(XBH_S32 mode);
+    //override
+    XBH_S32 getMcuFattMode(XBH_S32 *mode);
+    //override
+    XBH_S32 setMcuIIcBypass(XBH_U8 u8IIcNum, XBH_U8 u8DeviceAddr, XBH_U8 u8RegAddr, XBH_U8 u8Len, XBH_U8* u8Data);
+    //override
+    XBH_S32 getMcuIIcBypass(XBH_U8 u8IIcNum, XBH_U8 u8DeviceAddr, XBH_U8 u8RegAddr, XBH_U8 u8Len, XBH_U8* u8Data);
+    //override
+    XBH_S32 readAndUpdateEdidBinFileByEdidType(int dev, const char* edidBinFilePath, int port);
 
 private:
     XBH_S32 open_i2c_dev(XBH_U32 i2cbus, XBH_CHAR *filename, size_t size, XBH_S32 quiet);
@@ -271,12 +357,13 @@ private:
     XBH_S32 getMcuGpioValue(XBH_S32 u8Group, XBH_S32 u8GpioNum, XBH_S32 mode, XBH_U32 *level);
     XBH_S32 setMcuGpioValue(XBH_S32 u8Group, XBH_S32 u8GpioNum,  XBH_U32 level);
     XBH_BOOL is_valid_mac_addr(const XBH_CHAR* macAddr);
-
+    XBH_S32 handleLicenseFileMissing();
 private:
     XBH_S32 mGpioFd = -1;
     XBH_S32 mRtcId = -1;
     struct termios uart_debug_config;
     static XbhMutex mLock;
+    XBH_AUDIO_OUTPUT_E mAudioOutput;
 };
 
 #endif //XBH_AMLOGIC_311D2_H

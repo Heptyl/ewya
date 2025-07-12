@@ -61,7 +61,10 @@ XBH_S32 XbhXMM8195_G::getHdmi1Det(XBH_BOOL *enable)
     XBH_S32 s32Ret = XBH_FAILURE;
     XBH_U32 u32GpioValue;
     s32Ret = this->XbhMtk_8195::getGpioInputValue(XBH_BOARD_GPIO_HDMI_DET, &u32GpioValue);
-    *enable =  u32GpioValue == XBH_BOARD_GPIO_HDMI_DET_LEVEL ? XBH_TRUE : XBH_FALSE;
+    if(s32Ret == XBH_SUCCESS)
+    {
+        *enable =  u32GpioValue == XBH_BOARD_GPIO_HDMI_DET_LEVEL ? XBH_TRUE : XBH_FALSE;
+    }
     return s32Ret;
 }
 
@@ -71,7 +74,10 @@ XBH_S32 XbhXMM8195_G::getFHdmi1Det(XBH_BOOL *enable)
     XBH_S32 s32Ret = XBH_FAILURE;
     XBH_U32 u32GpioValue;
     s32Ret = this->XbhMtk_8195::getGpioInputValue(XBH_BOARD_GPIO_FHDMI_DET, &u32GpioValue);
-    *enable =  u32GpioValue == XBH_BOARD_GPIO_FHDMI_DET_LEVEL ? XBH_TRUE : XBH_FALSE;
+    if(s32Ret == XBH_SUCCESS)
+    {
+      *enable =  u32GpioValue == XBH_BOARD_GPIO_FHDMI_DET_LEVEL ? XBH_TRUE : XBH_FALSE;
+    }
     return s32Ret;
 }
 
@@ -81,7 +87,10 @@ XBH_S32 XbhXMM8195_G::getFUsbc1Det(XBH_BOOL *enable)
     XBH_S32 s32Ret = XBH_FAILURE;
     XBH_U32 u32GpioValue;
     s32Ret = this->XbhMtk_8195::getGpioInputValue(XBH_BOARD_GPIO_F_Type_C_DET, &u32GpioValue);
-    *enable =  u32GpioValue == XBH_BOARD_GPIO_F_USBC_DET_LEVEL ? XBH_TRUE : XBH_FALSE;
+    if(s32Ret == XBH_SUCCESS)
+    {
+       *enable =  u32GpioValue == XBH_BOARD_GPIO_F_USBC_DET_LEVEL ? XBH_TRUE : XBH_FALSE;
+    }
     return s32Ret;
 }
 
@@ -91,7 +100,10 @@ XBH_S32 XbhXMM8195_G::getUsbc1Det(XBH_BOOL *enable)
     XBH_S32 s32Ret = XBH_FAILURE;
     XBH_U32 u32GpioValue;
     s32Ret = this->XbhMtk_8195::getGpioInputValue(XBH_BOARD_GPIO_USBC_DET, &u32GpioValue);
-    *enable =  u32GpioValue == XBH_BOARD_GPIO_USBC_DET_LEVEL ? XBH_TRUE : XBH_FALSE;
+    if(s32Ret == XBH_SUCCESS)
+    {
+         *enable =  u32GpioValue == XBH_BOARD_GPIO_USBC_DET_LEVEL ? XBH_TRUE : XBH_FALSE;
+    }
     return s32Ret;
 }
 
@@ -231,6 +243,32 @@ XBH_S32 XbhXMM8195_G::getFlashEepData(string &pBuff)
 }
 
 /**
+ * 设置某个频段的喇叭声音均衡
+ * param[in] enEqMode. 频段
+ * param[out] s32Value. 增益值
+ * retval 0:success,-1:failure
+*/
+XBH_S32 XbhXMM8195_G::setAudioEq(XBH_EQ_MODE_E enEqMode, XBH_S32 s32Value)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    s32Ret = XbhAudioAmplifierManager::getInstance()->setAudioEq(enEqMode, s32Value);
+    return  s32Ret;    
+}
+
+/**
+ * 获取某个频段的喇叭声音均衡
+ * param[in] enEqMode. 频段
+ * param[out] s32Value. 增益值
+ * retval 0:success,-1:failure
+*/
+XBH_S32 XbhXMM8195_G::getAudioEq(XBH_EQ_MODE_E enEqMode, XBH_S32* s32Value)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    s32Ret = XbhAudioAmplifierManager::getInstance()->getAudioEq(enEqMode, s32Value);
+    return  s32Ret;    
+}
+
+/**
  * 设置低音增益
  * param[in] s32Value 增益值
  * retval 0:success,-1:failure
@@ -238,6 +276,13 @@ XBH_S32 XbhXMM8195_G::getFlashEepData(string &pBuff)
 XBH_S32 XbhXMM8195_G::setBass(XBH_S32 s32Value)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_BOOL isLineOutConnected = XBH_FALSE;
+    getHpDetectStatus(&isLineOutConnected);
+    if (mAudioOutput == XBH_AUDIO_OUTPUT_ARC || isLineOutConnected)
+    {
+       XLOGD("setBass only for speaker, return fail when ARC/LineOut connected");
+       return s32Ret;
+    }
     s32Ret = XbhAudioAmplifierManager::getInstance()->setBass(s32Value);
     return  s32Ret;
 }
@@ -266,6 +311,13 @@ XBH_S32 XbhXMM8195_G::getBass(XBH_S32 *s32Value)
 XBH_S32 XbhXMM8195_G::setTreble(XBH_S32 s32Value)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_BOOL isLineOutConnected = XBH_FALSE;
+    getHpDetectStatus(&isLineOutConnected);
+    if (mAudioOutput == XBH_AUDIO_OUTPUT_ARC || isLineOutConnected)
+    {
+       XLOGD("setTreble only for speaker, return fail when ARC/LineOut connected");
+       return s32Ret;
+    }
     s32Ret = XbhAudioAmplifierManager::getInstance()->setTreble(s32Value);
     return  s32Ret;
 }
@@ -294,6 +346,13 @@ XBH_S32 XbhXMM8195_G::getTreble(XBH_S32 *s32Value)
 XBH_S32 XbhXMM8195_G::setBalance(XBH_S32 s32Value)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_BOOL isLineOutConnected = XBH_FALSE;
+    getHpDetectStatus(&isLineOutConnected);
+    if (mAudioOutput == XBH_AUDIO_OUTPUT_ARC || isLineOutConnected)
+    {
+       XLOGD("setBalance only for speaker, return fail when ARC/LineOut connected");
+       return s32Ret;
+    }
     s32Ret = XbhAudioAmplifierManager::getInstance()->setBalance(s32Value);
     return  s32Ret;
 }
@@ -440,7 +499,10 @@ XBH_S32 XbhXMM8195_G::getOps1Det(XBH_BOOL *enable)
     XBH_S32 s32Ret = XBH_FAILURE;
     XBH_U32 u32GpioValue;
     s32Ret = this->XbhMtk_8195::getGpioInputValue(XBH_BOARD_GPIO_OPS_PB_DET, &u32GpioValue);
-    *enable =  u32GpioValue == XBH_BOARD_GPIO_OPS_PB_DET_LEVEL ? XBH_TRUE : XBH_FALSE;
+    if(s32Ret == XBH_SUCCESS)
+    {
+      *enable =  u32GpioValue == XBH_BOARD_GPIO_OPS_PB_DET_LEVEL ? XBH_TRUE : XBH_FALSE;
+    }
     return s32Ret;
 }
 
@@ -472,14 +534,15 @@ XBH_S32 XbhXMM8195_G::getOpsPowerStatus(XBH_BOOL *bEnable, XBH_SOURCE_E enSource
     if (enSource == XBH_SOURCE_OPS1)
     {
         s32Ret = this->XbhMtk_8195::getGpioInputValue(XBH_BOARD_GPIO_OPS_PWR_STATUS, &u32GpioValue);
-        *bEnable =  u32GpioValue == XBH_BOARD_GPIO_OPS_PWR_ON_LEVEL ? XBH_TRUE : XBH_FALSE;
+        if(s32Ret == XBH_SUCCESS)
+        {
+             *bEnable =  u32GpioValue == XBH_BOARD_GPIO_OPS_PWR_ON_LEVEL ? XBH_TRUE : XBH_FALSE;
+        }
     }
     return  s32Ret;
 }
 
-//TODO for hardware test
-static XBH_BOOL gOpsDetGpioValue = XBH_FALSE;
-//override
+
 XBH_S32 XbhXMM8195_G::getOpsDetStatus(XBH_BOOL *bEnable, XBH_SOURCE_E enSource)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
@@ -487,15 +550,10 @@ XBH_S32 XbhXMM8195_G::getOpsDetStatus(XBH_BOOL *bEnable, XBH_SOURCE_E enSource)
     if (enSource == XBH_SOURCE_OPS1)
     {
         s32Ret = this->XbhMtk_8195::getGpioInputValue(XBH_BOARD_GPIO_OPS_PB_DET, &u32GpioValue);
-        if (gOpsDetGpioValue != u32GpioValue)
+        if(s32Ret == XBH_SUCCESS)
         {
-            XLOGE("Fixed me! 1: s32Ret = %d, gOpsDetGpioValue = %d, u32GpioValue = %d\n", s32Ret, gOpsDetGpioValue, u32GpioValue);
-            usleep(300 * 1000);
-            s32Ret = this->XbhMtk_8195::getGpioInputValue(XBH_BOARD_GPIO_OPS_PB_DET, &u32GpioValue);
-            XLOGE("Fixed me! 2: s32Ret = %d, gOpsDetGpioValue = %d, u32GpioValue = %d\n", s32Ret, gOpsDetGpioValue, u32GpioValue);
-            gOpsDetGpioValue = u32GpioValue;
+             *bEnable =  u32GpioValue == XBH_BOARD_GPIO_OPS_PB_DET_LEVEL ? XBH_TRUE : XBH_FALSE;
         }
-        *bEnable =  u32GpioValue == XBH_BOARD_GPIO_OPS_PB_DET_LEVEL ? XBH_TRUE : XBH_FALSE;
     }
     return  s32Ret;
 }
@@ -1085,12 +1143,38 @@ XBH_S32 XbhXMM8195_G::initProjectIdConfig()
 }
 #endif
 
+XBH_S32 XbhXMM8195_G::getEthPortSpeed(XBH_S32 port, XBH_S32* value)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_CHAR buf[32];
+    std :: string result;
+
+    // 中间件端口是从0开始计数，这里是从1开始计数，对此做一个转换
+    port += 1;
+    
+    memset(buf, 0, sizeof(buf));
+    snprintf(buf, sizeof(buf), "%d", port);
+    XbhSysOpt::getInstance()->writeSysfs("/proc/rtk_gsw/port_status", buf);
+    XbhSysOpt::getInstance()->readSysfs("/proc/rtk_gsw/port_status", result);
+    
+    if (!result.empty())
+    {
+        XLOGD("%s: %d result:%s!\n", __FUNCTION__, __LINE__, result.c_str());
+        if (sscanf(result.c_str(), "%d_%s", value, &buf) == 2)
+        {
+            s32Ret = XBH_SUCCESS;
+        }
+    }
+    
+    return s32Ret;
+}
+
 XBH_S32 XbhXMM8195_G::setOnStop()
 {
     XBH_S32 s32Ret = XBH_FAILURE;
 
     XLOGD("---- onStop ----");
-    XbhSysOpt::getInstance()->writeSysfs("/sys/class/rtl8367rb/phy/gmac1_rxclk_status","1");//让phy芯片gmac1_clk停止输出时钟信号
+    XbhSysOpt::getInstance()->writeSysfs("/proc/rtk_gsw/extport_mode","0");//让phy芯片gmac1_clk停止输出时钟信号
     setGpioOutputValue(XBH_BOARD_GPIO_NETIC_OPS_PWR,!XBH_BOARD_GPIO_NETIC_OPS_PWR_ON);//关闭
     setGpioOutputValue(XBH_BOARD_GPIO_FHUB20_RST,XBH_BOARD_GPIO_FHUB20_RST_ON);//关闭
     setGpioOutputValue(XBH_BOARD_GPIO_AMP_EN,!XBH_BOARD_GPIO_AMP_EN_ON);//关闭 AMP_EN
@@ -1098,25 +1182,6 @@ XBH_S32 XbhXMM8195_G::setOnStop()
     setGpioOutputValue(XBH_BOARD_GPIO_OPS_RST,XBH_BOARD_GPIO_OPS_RST_ENABLE);//拉低OPS_RST引脚，降低待机时功耗
 
     return  s32Ret;
-}
-//override
-XBH_S32 XbhXMM8195_G::setARCEnable(XBH_BOOL bEnable)
-{
-      XBH_S32 s32Ret = XBH_SUCCESS;
-      XLOGD("setARCEnable :%d, speaker mute:%s", bEnable, bEnable?"off":"on");
-
-      if (bEnable)
-      {
-          setGpioOutputValue(XBH_BOARD_GPIO_DISPLAY_ARCSPIDF_SW, XBH_BOARD_GPIO_DISPLAY_ARCSPIDF_SW_ARC);
-          setMute(XBH_AUDIO_CHANNEL_SPEAKER, XBH_TRUE);
-      }
-      else
-      {
-          setGpioOutputValue(XBH_BOARD_GPIO_DISPLAY_ARCSPIDF_SW, XBH_BOARD_GPIO_DISPLAY_ARCSPIDF_SW_SPIDF);
-          setMute(XBH_AUDIO_CHANNEL_SPEAKER, XBH_FALSE);
-      }
-
-      return s32Ret;
 }
 
 XBH_S32 XbhXMM8195_G::setCecEnable(XBH_BOOL enable) {
@@ -1306,10 +1371,10 @@ XBH_BOOL XbhXMM8195_G::privatePwmWrite(string path, string value)
 XBH_S32 XbhXMM8195_G::setTypeCPdAbility(XBH_PDCAPACITY_POWER pdability, XBH_SOURCE_E enSource)
 {
     XBH_S32 ret = XBH_SUCCESS;
-    if(enSource == XBH_SOURCE_USBC1)
+    if(enSource == XBH_SOURCE_F_USBC1)
     {
         ret = XbhPdIcManager::getInstance()->setTypecCapacity(XBH_UPDATE_FRONT_RTS5450M, pdability);
-        XLOGD("setSourcePdAbility  XBH_SOURCE_USBC1 !\n");
+        XLOGD("setTypeCPdAbility  XBH_SOURCE_USBC1  pdability == %d\n",pdability);
     }else
     {
         XLOGE("wait for imp!\n");
@@ -1323,6 +1388,7 @@ XBH_S32 XbhXMM8195_G::setSourcePdAbility(XBH_PDCAPACITY_POWER pdability, XBH_SOU
     if(enSource == XBH_SOURCE_F_USBC1)
     {
         ret = XbhPdIcManager::getInstance()->setTypecCapacity(XBH_UPDATE_FRONT_RTS5450M, pdability);
+        XLOGD("setSourcePdAbility  XBH_SOURCE_USBC1  pdability == %d\n",pdability);
     }
     else
     {
@@ -1332,6 +1398,42 @@ XBH_S32 XbhXMM8195_G::setSourcePdAbility(XBH_PDCAPACITY_POWER pdability, XBH_SOU
     return ret;
 }
 
+XBH_S32 XbhXMM8195_G::setOpsResetEnable(XBH_BOOL bEnable)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    if (bEnable)
+    {
+        s32Ret = this->XbhMtk_8195::setGpioOutputValue(XBH_BOARD_GPIO_OPS_RST, XBH_BOARD_GPIO_OPS_RST_ENABLE);
+    }
+    else
+    {
+        s32Ret = this->XbhMtk_8195::setGpioOutputValue(XBH_BOARD_GPIO_OPS_RST, !XBH_BOARD_GPIO_OPS_RST_ENABLE);
+    }
+    XLOGD("setOpsResetEnable bEnable=%d\n", bEnable);
+    return  s32Ret;
+}
+
+XBH_S32 XbhXMM8195_G::setSn(const XBH_CHAR* strSn)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    s32Ret = XbhPartitionData::getInstance()->setSn(strSn);
+    if (s32Ret == XBH_SUCCESS)
+    {
+        property_set("vendor.xbh.rkp.serialno", strSn);
+    }
+    /*设置标志位，判断标志为true 在线程里执行。直接执行setNvramValue 可能存在等待阻塞，异步在线程里写SN*/
+    mIsSetEnabled = true;
+    return  s32Ret;
+}
+
+XBH_S32 XbhXMM8195_G::getSn(XBH_CHAR* strSn)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    s32Ret  = XbhPartitionData::getInstance()->getSn(strSn);
+    /*getNvramValue 可能存在等待阻塞，不用获取里面sn号*/
+    //s32Ret = getNvramValue(BARCODE_OFFSET, BARCODE_LEN, (XBH_VOID*)strSn);
+    return s32Ret;
+}
 
 //------------------ private function end -----------------------------
 
@@ -1394,6 +1496,15 @@ void XbhXMM8195_G::run(const void *arg)
         return;
     }
 
+    if (mIsSetEnabled)
+    { //异步去调用写SN.
+        XBH_CHAR propVal[PROPERTY_VALUE_MAX] = {0};
+        if (property_get("vendor.xbh.rkp.serialno", propVal, "") > 0)
+        {
+            XbhMtk_8195::updateNvmStr(propVal);
+        }
+        mIsSetEnabled = false;
+    }
     switch (mBreathMode)
     {
         case XBH_LED_HOME_ON:

@@ -130,7 +130,8 @@ enum XBH_AUDIO_OUTPUT_E
     XBH_AUDIO_OUTPUT_BOTH,      //speaker和接入设备同时输出
     XBH_AUDIO_OUTPUT_EXTERNAL,  //只在接入设备上输出
     XBH_AUDIO_OUTPUT_INTERNAL,  //只在speaker上输出
-    XBH_AUDIO_OUTPUT_USB,  //只在外接USB上输出
+    XBH_AUDIO_OUTPUT_USB,       //只在外接USB上输出
+    XBH_AUDIO_OUTPUT_ARC,       //只在外接ARC上输出
 
     XBH_AUDIO_OUTPUT_BUTT
 };
@@ -290,6 +291,8 @@ struct HDMI_SW_OPT_TABLE
     XBH_S32 defaultPort;    //默认端口
     XBH_S32 prePort;        //前一级hdmiswitch的序号id和对应的port,
                             //为了兼容以前的版本，switch id和 port都是从1开始
+    XBH_S32 sGpio2;         // 新增：第二个HDMI switch切换GPIO,与上方1切2GPIO组合2切4 hdmi Switch
+    XBH_S32 sLevel2;        // 新增：第二个HDMI switchGPIO电平
 };
 
 //HDMI switch port
@@ -383,6 +386,22 @@ enum XBH_SIGNAL_STATUS_E
     XBH_SIGNAL_STATUS_BUTT
 };
 
+typedef enum _SOC_POWER_STATUS
+{
+    SOC_STATUS_POWEROFF         = 0,
+    SOC_STATUS_POWERON          = 0xAA,
+    SOC_STATUS_STANDBY          = 0xFE,
+    SOC_STATUS_REBOOT           = 0xFA,
+    SOC_STATUS_BOOTING          = 0xFD,
+    SOC_STATUS_SLEEPING         = 0xFC,
+    SOC_STATUS_TEMP_HIGH        = 0xDB,
+    SOC_STATUS_TOUCHSCREEN_ERR  = 0xDC,
+    SOC_STATUS_IP_CONFLICT      = 0xDD,
+    SOC_STATUS_SOFTWARE_ERR     = 0xDE,
+    SOC_STATUS_DIAGNOSING       = 0xDF,
+    SOC_STATUS_UPDATE           = 0xFB
+}SOC_POWER_STATUS;
+
 struct XBH_MCU_I2CBUFFDEF_S
 {
     XBH_U8 len;
@@ -433,8 +452,16 @@ enum XBH_MCU_I2CCMDDEF_E
     CMD_I2C_GET_WAKEUP_NFC            = 0x46,
     CMD_I2C_SET_WAKEUP_PIR            = 0x47,
     CMD_I2C_GET_WAKEUP_PIR            = 0x48,
+    CMD_I2C_SET_WAKEUP_TCPIP          = 0x49,
+    CMD_I2C_GET_WAKEUP_TCPIP          = 0x4A,
+
+    CMD_I2C_SET_ERR_DET_STATE         = 0x80,
+    CMD_I2C_GET_ERR_DET_STATE         = 0x81,
+    CMD_I2C_CLEAR_ERROR_RECORDS       = 0x82,
+    CMD_I2C_READ_ERROR_CODE           = 0x83,
 
     CMD_I2C_SET_MAC_ADDR              = 0x90,
+    CMD_I2C_SET_NET_ADDR              = 0x91,
 
     CMD_I2C_GET_APP_VER           = 0xA0,
     CMD_I2C_SET_GPIO_OUTPUT       = 0xA1,
@@ -477,6 +504,10 @@ enum XBH_MCU_I2CCMDDEF_E
     CMD_I2C_CHIP_FIRMWARE_VER     = 0xF7,
     CMD_I2C_GET_TEST_MODE         = 0xF8,
     CMD_I2C_SET_TEST_MODE         = 0xF9,
+
+    CMD_I2C_GET_OPS_BYPASS_DATA_LEN = 0x60,
+    CMD_I2C_OPS1_BYPASS_DATA      = 0x61,
+    CMD_I2C_OPS2_BYPASS_DATA      = 0x62,
 };
 enum XBH_MCU_NOTICE_E
 {
@@ -541,6 +572,7 @@ enum XBH_WAKEUP_E
     XBH_WAKEUP_DP,
     XBH_WAKEUP_BHDMI,
     XBH_WAKEUP_FHDMI,
+    XBH_WAKEUP_TCPIP,
     XBH_WAKEUP_BUTT,
 };
 
@@ -747,6 +779,17 @@ struct XBH_SSC_INFO_S
     XBH_U32 u32Ratio;
 };
 
+//usbc insertion 类型
+enum XBH_USBC_INSERTION_TYPE_E
+{
+    XBH_USBC_INSERTION_FORWARD,            //USBC forward insertion
+    XBH_USBC_INSERTION_REVERSE,            //USBC reverse insertion
+    
+    XBH_USBC_INSERTION_BUTT
+};
+
+
+
 /**
 * 充电功率
 */
@@ -762,6 +805,44 @@ enum XBH_PDCAPACITY_POWER
     XBH_PDCAPACITY_85W           ,//= 7;
     XBH_PDCAPACITY_90W           ,//= 8;
     XBH_PDCAPACITY_96W           ,//= 9;
+};
+
+/**
+* CRC校验流程
+*/
+enum XBH_CRC_PROCESS
+{
+    XBH_WAIT_FOR_AUTH       = 0x01,         // 等待认证请求
+    XBH_WAIT_FOR_VERIFY     = 0x02,         // 等待验证请求
+    XBH_QUERY_SCREEN_INFO   = 0x03,         // 查询大屏信息
+};
+
+/**
+* CRC检验结果
+*/
+enum XBH_CRC_RESULT_STATUS
+{
+    XBH_CRC_NOT_PERFORMED  = 0x00,    // 没有进行CRC校验
+    XBH_CRC_CHECK_FAILED   = 0x01,    // CRC校验失败
+    XBH_CRC_CHECK_SUCCESS  = 0x02     // CRC校验成功
+};
+
+/**
+* 厂商型号信息
+*/
+enum XBH_MODEL_TYPE
+{
+    XBH_BOE         = 0x01,         // BOE
+    XBH_TPV         = 0x02,         // TPV
+};
+
+/**
+* 透传设备类型
+*/
+enum XBH_BYPASS_TYPE
+{
+    XBH_BYPASS_TYPE_OPS1 = 0x01,        // OPS1
+    XBH_BYPASS_TYPE_OPS2 = 0x02,        // OPS2
 };
 
 /**
@@ -782,7 +863,22 @@ enum XBH_MAC_ADDRESS_TYPE
     XBH_TYPEC_2 = 2       ,
     XBH_OPS_1 = 11        ,
     XBH_OPS_2 = 12        ,
+    XBH_RNDIS = 21        ,
 };
+
+/**
+* macType
+* 0 板载Ethernet
+* 1 OPS
+* 2 SDM
+* 3 Usbc
+* 4 RNDIS
+*/
+#define XBH_MACTYPE_ETH         0
+#define XBH_MACTYPE_OPS         1
+#define XBH_MACTYPE_SDM         2
+#define XBH_MACTYPE_USBC        3
+#define XBH_MACTYPE_RNDIS       4
 
 /**
 *  FATT调用烧录的SN/PN接口:物料类型
@@ -899,6 +995,7 @@ enum XBH_UPDATE_FIRMWARE_E
 
     XBH_UPDATE_FRONT_VL105        = 0x300,//TYPEC to HDMI
     XBH_UPDATE_BOARD_VL105        = 0x301,//TYPEC to HDMI
+    XBH_UPDATE_BOARD_HL817        = 0x302,//usb hub
 
     XBH_UPDATE_MCU                = 0x400,
     XBH_UPDATE_AUDIO_CODEC        = 0x500
@@ -934,6 +1031,7 @@ enum XBH_UPDATE_FIRMWARE_E
 
 #define ASW3642             0xA0 //1切2的hdmi switch
 #define TS3DV642            0xA1 //1切2的hdmi switch
+#define WXQ_LT8641UX_U5     0xA2 //1切4的hdmi switch   双IO切换方式
 
 //video out ic, vbo to hdmi, hdmi to edp etc
 #define MN869129            0x01
@@ -954,6 +1052,7 @@ enum XBH_UPDATE_FIRMWARE_E
 #define LT8711UXE1          0x02
 #define GSV2201E            0x03
 #define GSV2202E            0x04
+#define WXQ_LT8711UX        0x05
 
 //vga 2 hdmi ic
 #define MS9282              0x01
@@ -1023,6 +1122,9 @@ enum XBH_UPDATE_FIRMWARE_E
 #define BOARD_RTS5450M            0x01
 #define FRONT_RTS5450M            0x02
 
+// USB HUB
+#define BOARD_HL817 0x01
+
 //前置辅板
 #define FRONT_NONE_BOARD        0x00
 #define FRONT2_P2_BOARD         0x01    //HDMI直连，usbc只支持usb连接
@@ -1051,6 +1153,7 @@ enum XBH_UPDATE_FIRMWARE_E
 #define FRONT2_S2_BOARD         0x2000  //HDMI + usbc 全功能，switch为2712
 
 #define FRONT3_U8_BOARD         0x3008  //HDMI + usbc 全功能，switch为2712
+#define FRONT_WXQ_LG8195_311_3H_V1_1_BOARD         0x3000  //HDMI1/HDMI2/HDMI3/USBC 万兴强WXQ-LG8195-311-3H-V1.1 全功能,switch GPIO1/GPIO2 2切换4;
 
 #ifndef HYM8563_I2C_ADDR_WR
 #define HYM8563_I2C_ADDR_WR 0x51
@@ -1089,6 +1192,14 @@ enum XBH_UPDATE_FIRMWARE_E
 #define XBH_HDMI_A_1    0
 #define XBH_HDMI_A_2    1
 #define XBH_DP_1        2
+
+//OPS透传读写标志
+#define XBH_READ_OPS_DATA                       XBH_TRUE
+#define XBH_WRITE_OPS_DATA                      XBH_FALSE
+
+//HOST DEVICE MODE
+#define XBH_HOST_MODE                           0
+#define XBH_DEVICE_MODE                         1
 
 //------------------------ cusdata start ------------------------
 // one block is 0x100(256), the end of offset need to follow value:
@@ -1259,9 +1370,34 @@ enum XBH_UPDATE_FIRMWARE_E
 #define XBH_CUSDATA_SMART_PN_SN_SEPARATOR_OFFSET     0x5a00//0x5900 + 0x100
 #define XBH_CUSDATA_SMART_PN_SN_SEPARATOR_LEN        0x20//32
 
+//HuaWei production information的需求
+#define XBH_CUSDATA_HUAWEI_PRODUCTION_INFORMATION_OFFSET     0x5b00//0x5a00 + 0x100
+#define XBH_CUSDATA_HUAWEI_PRODUCTION_INFORMATION_LEN        0x200//512
+
+//BOE RTC FACTORY TEST的需求
+#define XBH_CUSDATA_BOE_RTC_TEST_INFORMATION_OFFSET     0x5e00//0x5b00 + 0x200
+#define XBH_CUSDATA_BOE_RTC_TEST_INFORMATION_LEN        0x40//64
+
+//BOE color gamma value的需求
+#define XBH_CUSDATA_BOE_GAMMA_VALUE_OFFSET     0x5f00//0x5e00 + 0x100
+#define XBH_CUSDATA_BOE_GAMMA_VALUE_LEN        0x20//32
+
+//RNDIS MAC 地址
+#define XBH_CUSDATA_RNDIS_MAC_ADDRESS_OFFSET         0x6000//0x5f00 + 0x100
+#define XBH_CUSDATA_RNDIS_MAC_ADDRESS_LEN            0x20//32
+
+//算法的lic_response文件保存
+#define XBH_CUSDATA_MIC_LIC_RESPONSE_OFFSET      0x6100//0x6000 + 0x100
+#define XBH_CUSDATA_MIC_LIC_RESPONSE_LEN         0x400//1024
+
+// Android Color temp data
+#define XBH_CUSDATA_ANDROID_COLORTEMP_DATA_OFFSET       0x6500//0x6100 + 0x400
+#define XBH_CUSDATA_ANDROID_COLORTEMP_DATA_LEN          (sizeof(struct XBH_GAIN_OFFSET_DATA_S) * XBH_COLORTEMP_BUTT) //336
+
 // googlekey data
 #define XBH_CUSDATA_GOOGLE_KEY_DATA_OFFSET           0x500000//0x50000 + 0x19000
 #define XBH_CUSDATA_GOOGLE_KEY_DATA_LEN              0x19000//100*1024=102400=0x19000=100k
+
 //------------------------ cusdata end ------------------------
 
 
@@ -1371,6 +1507,11 @@ enum XBH_UPDATE_FIRMWARE_E
 // 记录每个信源的edid 类型
 #define XBH_CUSPARAM_F_DP2_EDID_TYPE_OFFSET              0x3200//0x3000 + 0x200
 #define XBH_CUSPARAM_F_DP2_EDID_TYPE_LEN                 0x20//32
+
+// 用于U盘升级标志
+#define XBH_CUSPARAM_FROCE_UPGRADE_FLAG_OFFSET           0x3400//0x3200 + 0x200
+#define XBH_CUSPARAM_FROCE_UPGRADE_FLAG_LEN              0x01// 1
+
 //------------------------ cusparam end ------------------------
 
 

@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <dirent.h>
 #include <errno.h>
+#include <cerrno>
 #include <string.h>
 #include <dlfcn.h>
 #include <sys/stat.h>
@@ -65,6 +66,8 @@ extern "C" {
 #define PIP_MODE_PROPERTY "tvinput.hdmiin.buff_type"
 
 #define XBH_HAL_CHECK_SIGNAL    "vendor.xbh.hal_check_signal"
+#define XBH_INCREASE_SYS_INI "/mnt/xbhcust/systemproperty.ini"
+#define XBH_INCREASE_PQ_DIR "/mnt/xbhcust/pq"
 
 using namespace rockchip::hardware::outputmanager::V1_0;
 
@@ -2006,6 +2009,13 @@ XBH_S32 XbhRk_3576::dumpEdid(XBH_SOURCE_E idx)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
     s32Ret = XbhVgaEdidManager::getInstance()->dumpEdid();
+    return s32Ret;
+}
+
+XBH_S32 XbhRk_3576::setVgaEdid(const XBH_CHAR* strPath, XBH_SOURCE_E idx)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    s32Ret = XbhVgaEdidManager::getInstance()->setVgaEdid(strPath, idx);
     return s32Ret;
 }
 //----------------------------------------------------------------------------- private func start here -----------------------------------------------------------------
@@ -4597,8 +4607,145 @@ XBH_S32 XbhRk_3576::getHdmiRxLockStatus(XBH_BOOL* lock)
 XBH_S32 XbhRk_3576::setOnStop()
 {
     XBH_S32 s32Ret = XBH_SUCCESS;
-    setHdmiRx5vDet(XBH_FALSE);
     XLOGD("---- onStop ----");
+    return  s32Ret;
+}
+
+XBH_S32 XbhRk_3576::deleteFile(const std::string& file_path)
+{
+    struct stat st;
+
+    if (lstat(file_path.c_str(), &st) == XBH_FAILURE) 
+    {
+        if (errno == ENOENT) 
+        {
+            // 文件不存在，按需求返回成功
+            XLOGD("File '%s' does not exist (treat as success)", file_path.c_str());
+            return XBH_SUCCESS;
+        } 
+        else 
+        {
+            // 其他错误（如权限不足）
+            XLOGD("Failed to access '%s': %s", file_path.c_str(), strerror(errno));
+            return XBH_FAILURE;
+        }
+    }
+
+    if (unlink(file_path.c_str()) == XBH_FAILURE) 
+    {
+        XLOGD("Failed to delete '%s': %s", file_path.c_str(), strerror(errno));
+        return XBH_FAILURE;
+    }
+
+    XLOGD("Deleted: %s success", file_path.c_str());
+    return XBH_SUCCESS;
+}
+
+XBH_S32 XbhRk_3576::deleteDirectorySubfiles(const std::string& dir_path)
+{
+    DIR* dir = opendir(dir_path.c_str());
+    if (!dir) {
+        XLOGE("Failed to open '%s': %s", dir_path.c_str(), strerror(errno));
+        return XBH_FAILURE;
+    }
+
+    struct dirent* entry;
+    while ((entry = readdir(dir)) != nullptr) {
+        // 跳过当前目录（.）和父目录（..），避免无限递归
+        if (std::strcmp(entry->d_name, ".") == 0 || std::strcmp(entry->d_name, "..") == 0) {
+            continue;
+        }
+
+        // 构造完整路径（处理 dir_path 末尾是否有 '/' 的情况）
+        std::string full_path;
+        if (dir_path.back() == '/') {
+            full_path = dir_path + entry->d_name;
+        } else {
+            full_path = dir_path + "/" + entry->d_name;
+        }
+
+        // 获取文件元信息（使用 lstat 避免跟随符号链接）
+        struct stat st;
+        if (lstat(full_path.c_str(), &st) == XBH_FAILURE) {
+            XLOGE("Failed to access '%s': %s", full_path.c_str(), strerror(errno));
+            closedir(dir);
+            return XBH_FAILURE;
+        }
+
+        // 根据文件类型处理
+        if (S_ISREG(st.st_mode)) {
+            // 普通文件：直接删除
+            if (deleteFile(full_path) == XBH_FAILURE) {
+                XLOGE("Failed to deleteFile '%s': %s", full_path.c_str(), strerror(errno));
+                closedir(dir);
+                return XBH_FAILURE;
+            }
+        }else if (S_ISDIR(st.st_mode)) {
+            // 子目录：递归删除其内容后，再删除空目录
+            //注释掉删除目录的代码，因为涉及到Selinux权限问题,板控升级不需要删除目录,删除目录中的文件即可升级。
+            if (deleteDirectorySubfiles(full_path) == XBH_FAILURE) {
+                XLOGE("Failed to delete dir: '%s': %s", full_path.c_str(), strerror(errno));
+                closedir(dir);
+                return XBH_FAILURE;
+            }
+            // 删除空目录（此时子目录已清空）
+            /* if (rmdir(full_path.c_str()) == -1) {
+                XLOGE("Failed to delete empty dir: '%s': %s", full_path.c_str(), strerror(errno));
+                closedir(dir);
+                return XBH_FAILURE;
+            } */
+            XLOGD("Don't delete dir: '%s'", full_path.c_str());
+        }else if (S_ISLNK(st.st_mode)) {
+            // 符号链接：删除链接本身（不跟随）
+            if (unlink(full_path.c_str()) == -1) {
+                XLOGE("Failed to delete link file: '%s': %s", full_path.c_str(), strerror(errno));
+                closedir(dir);
+                return XBH_FAILURE;
+            }
+            XLOGD("Success to delete link file: '%s'", full_path.c_str());
+        } else {
+            // 其他类型文件（如设备文件、管道等），尝试删除
+            if (unlink(full_path.c_str()) == -1) {
+                XLOGE("Failed to delete special file: '%s': %s", full_path.c_str(), strerror(errno));
+                closedir(dir);
+                return XBH_FAILURE;
+            }
+            XLOGD("Success to delete special file: '%s'", full_path.c_str());
+        }
+    }
+
+    closedir(dir);
+    return XBH_SUCCESS;
+}
+
+/*
+* 此函数实现的功能是在increase升级前的准备工作。
+* 1. 删除/mnt/xbhcust目录下increase相关的文件
+*/
+XBH_S32 XbhRk_3576::prepareIncreaseBinUpgrade()
+{
+    XLOGD("Prepare for increase bin upgrade.Detele last increase bin related files\n");
+
+    if (deleteFile(XBH_INCREASE_SYS_INI))
+    {
+        XLOGE("Failed to delete config file\n");
+        return XBH_FAILURE;
+    }
+
+    if (deleteDirectorySubfiles(XBH_INCREASE_PQ_DIR))
+    {
+        XLOGE("Failed to delete directory: %s\n",XBH_INCREASE_PQ_DIR);
+        return XBH_FAILURE;
+    }
+
+    XLOGD("Success to delete last increase bin files");
+
+    return XBH_SUCCESS;
+}
+
+XBH_S32 XbhRk_3576::getEthPlugStatus(XBH_BOOL* bEnable)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
     return  s32Ret;
 }
 

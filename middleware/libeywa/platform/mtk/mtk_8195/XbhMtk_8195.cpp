@@ -96,9 +96,11 @@ typedef struct {
 //source table
 static XBH_U8 source_available[] = XBH_SRC_AVAILABLE_TABLE
 XbhMutex  XbhMtk_8195::m_McuLock;
+XbhMutex  XbhMtk_8195::m_NvmLock;
 // drm key status
 static XBH_BOOL gNeedKeyUpdate = XBH_TRUE;
 static XBH_U32 gKeyStatus[DRM_KEY_MAX];
+static XBH_U8 mCheckRx5v = 0;
 
 
 struct lg_fd_closer
@@ -252,6 +254,7 @@ no_copy_exit:
 //------------------ static function end -----------------------------
 
 //------------------ public function begin -----------------------------
+
 XbhMtk_8195::XbhMtk_8195()
 {
     XLOGD(" begin ");
@@ -259,6 +262,9 @@ XbhMtk_8195::XbhMtk_8195()
     XbhPartitionData::getInstance()->setDataPath(MSDC_CUSDATA_PATH, MSDC_CUSPARAM_PATH);
     //init console
     initSerialPort();
+    //enable keypower.
+    setMcuEnableKeyPower();
+    handleLicenseFileMissing();
     //gpio fd
     mGpioFd = open(GPIO_DEV_PATH, O_RDWR);
     if (mGpioFd < 0)
@@ -271,7 +277,6 @@ XbhMtk_8195::XbhMtk_8195()
     {
         mLockIIC[i] = -1;
     }
-
     XLOGD(" end ");
 }
 
@@ -642,25 +647,7 @@ XBH_S32 XbhMtk_8195::setIICData(XBH_U32 u32I2cNum, XBH_U8 u8DevAddress, XBH_U32 
         }
     }
 
-    do {
-        s32Ret = setChipI2cData(u32I2cNum, u8DevAddress, u32RegAddr, u32RegAddrCount, u32Length, u8Data);
-    
-        if (s32Ret == XBH_SUCCESS)
-        {
-            break;
-        }
-
-        //最多重试5次
-        if (++retryConut < 5)
-        {
-            usleep(20 * 1000);
-        }
-    } while (retryConut < 5);
-    
-    if(retryConut > 0)
-    {
-        XLOGE("%s I2C write  (ret: %d), retry %d times.\n", __FUNCTION__, s32Ret, retryConut);
-    }
+    s32Ret = setChipI2cData(u32I2cNum, u8DevAddress, u32RegAddr, u32RegAddrCount, u32Length, u8Data);
 
     return  s32Ret;
 }
@@ -727,7 +714,8 @@ XBH_S32 XbhMtk_8195::getSocHdmiEdidStatus(XBH_BOOL *enable)
 }
 
 XBH_S32 XbhMtk_8195::setMacAddress(XBH_S32 macType, const XBH_CHAR* strMacAddress)
-{
+{   
+    XBH_S32 s32Ret = XBH_FAILURE;
     F_ID eth_nvram_fd = {0};
     File_Ethernet_Struct write_ethernet_nvram;
     unsigned int *iFileEthMacAddrLID;
@@ -803,9 +791,8 @@ XBH_S32 XbhMtk_8195::setMacAddress(XBH_S32 macType, const XBH_CHAR* strMacAddres
 
     NVM_CloseFileDesc(eth_nvram_fd);
     XLOGD("write ethernet addr success!\n");
-
     sync();
-
+    s32Ret = XbhPartitionData::getInstance()->setMacAddress(strMacAddress);
     return XBH_SUCCESS;
 }
 
@@ -888,6 +875,7 @@ XBH_S32 XbhMtk_8195::getADCChannelValue(XBH_U32 u32Channel, XBH_U32 *u32Value)
     if(s32Ret == -1)
     {
         XLOGE("BoardTemp open ADC_DEV_PATH error! %d\n", errno);
+        close(fp);
         return -1;
     }
 
@@ -973,6 +961,33 @@ XBH_S32 XbhMtk_8195::getColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFS
 {
     XBH_S32 s32Ret = XBH_SUCCESS;
     s32Ret  = XbhPartitionData::getInstance()->getColorTempPara(enColorTemp, data);
+    return  s32Ret;
+}
+
+
+/**
+ * 设置android对应模式的具体色温数据
+ * param[in] enColorTemp. 色温模式
+ * param[in] data. 色温参数
+ * retval 0:success,-1:failure
+*/
+XBH_S32 XbhMtk_8195::setAndroidColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    s32Ret  = XbhPartitionData::getInstance()->setAndroidColorTempPara(enColorTemp, data);
+    return  s32Ret;
+}
+
+/**
+ * 获取android对应模式的具体色温数据
+ * param[in] enColorTemp. 色温模式
+ * param[out] data. 色温参数
+ * retval 0:success,-1:failure
+*/
+XBH_S32 XbhMtk_8195::getAndroidColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    s32Ret  = XbhPartitionData::getInstance()->getAndroidColorTempPara(enColorTemp, data);
     return  s32Ret;
 }
 
@@ -1348,6 +1363,9 @@ XBH_S32 XbhMtk_8195::setSn(const XBH_CHAR* strSn)
 {
     XBH_S32 s32Ret = XBH_SUCCESS;
     s32Ret = XbhPartitionData::getInstance()->setSn(strSn);
+    if (s32Ret == XBH_SUCCESS) {
+        property_set("vendor.xbh.rkp.serialno", strSn);
+    }
     s32Ret = setNvramValue(BARCODE_OFFSET, BARCODE_LEN, (XBH_VOID*)strSn);
     return  s32Ret;
 }
@@ -1359,6 +1377,137 @@ XBH_S32 XbhMtk_8195::getSn(XBH_CHAR* strSn)
     s32Ret = getNvramValue(BARCODE_OFFSET, BARCODE_LEN, (XBH_VOID*)strSn);
     return s32Ret;
 }
+
+XBH_S32 XbhMtk_8195::getMicLicenseState(XBH_S32* status)
+{   
+    XBH_S32 s32Ret = XBH_FAILURE;
+    const char* lic_response = "/data/vendor/lic_response";
+    const char* lic_status = "/data/vendor/lic_status";
+    std::string result;
+
+    property_set("persist.vendor.xbh.usb.uac_android_enable", "true");
+    usleep(200 * 1000);
+    property_set("persist.vendor.xbh.usb.uac_android_enable", "false");
+    
+    // Step 1: 判断 lic_response 文件是否存在
+    if (access(lic_response, F_OK) == 0) 
+    {
+        // 文件存在，读取 lic_status 状态
+        if (!XbhSysOpt::getInstance()->readSysfs(lic_status, result)) 
+        {
+            XLOGE("%s: %d Failed to read sysfs for lic_status\n", __FUNCTION__, __LINE__);
+            *status = s32Ret;
+            return s32Ret;
+        }
+
+        XLOGD("%s: %d MicLicenseState: %s\n", __FUNCTION__, __LINE__, result.c_str());
+
+        if (strcmp("pass", result.c_str()) == 0) 
+        {
+            // 状态 pass，开始读取文件并写入系统键值对
+            int fd = open(lic_response, O_RDONLY);
+            if (fd == -1) 
+            {
+                XLOGE("%s: %d Failed to open lic_response file\n", __FUNCTION__, __LINE__);
+                *status = s32Ret;
+                return s32Ret;
+            }
+
+            off_t size = lseek(fd, 0, SEEK_END);
+            if (size <= 0) 
+            {
+                close(fd);
+                XLOGE("%s: %d lic_response file is empty or invalid\n", __FUNCTION__, __LINE__);
+                *status = s32Ret;
+                return s32Ret;
+            }
+
+            lseek(fd, 0, SEEK_SET);
+            char* buffer = (char*)malloc(size + 1);
+            if (!buffer) 
+            {
+                close(fd);
+                XLOGE("%s: %d Memory allocation failed\n", __FUNCTION__, __LINE__);
+                *status = s32Ret;
+                return s32Ret;
+            }
+
+            ssize_t bytes_read = read(fd, buffer, size);
+            close(fd);
+
+            if (bytes_read <= 0 || bytes_read != size) 
+            {
+                free(buffer);
+                XLOGE("%s: %d Failed to read lic_response file content\n", __FUNCTION__, __LINE__);
+                *status = s32Ret;
+                return s32Ret;
+            }
+
+            buffer[bytes_read] = '\0';
+            s32Ret = XbhPartitionData::getInstance()->setMicLicResponse(buffer);
+            //s32Ret = mSystemControlClient->writeUnifyKey("lic_response", buffer) ? XBH_SUCCESS : XBH_FAILURE;
+            free(buffer);
+            if (s32Ret != XBH_SUCCESS) 
+            {
+                XLOGE("%s: %d writeUnifyKey failed, s32Ret=%d\n", __FUNCTION__, __LINE__, s32Ret);
+            }
+            XLOGD("%s: %d writeUnifyKey success, size=%d\n", __FUNCTION__, __LINE__, size);
+            *status = s32Ret;
+            return s32Ret;
+        }
+        else 
+        {
+            // lic_status 不是 pass
+            XLOGE("%s: %d MicLicenseState not pass: %s\n", __FUNCTION__, __LINE__, result.c_str());
+            *status = s32Ret;
+            return s32Ret;
+        }
+    }
+    else 
+    {
+        XLOGE("%s: %d Wrote response is no exit !!\n", __FUNCTION__, __LINE__);
+        *status = s32Ret;
+        return s32Ret;
+    }
+}
+
+XBH_S32 XbhMtk_8195::handleLicenseFileMissing()
+{   
+    XBH_S32 s32Ret = XBH_FAILURE;
+    const XBH_CHAR* lic_response = "/data/vendor/lic_response";
+    std::string strResponse;
+    XBH_CHAR buffer[1024] = {0};
+    if (access(lic_response, F_OK) != 0)
+    {
+        // 从统一存储区读取 lic_response 数据
+        s32Ret = XbhPartitionData::getInstance()->getMicLicResponse(buffer);
+        if(s32Ret != XBH_SUCCESS)
+        {
+            XLOGE("%s: %d Failed to getMicLicResponse from cusdata!\n", __FUNCTION__, __LINE__);
+        }
+        XLOGD("%s: %d getMicLicResponse success, buffer=%s\n", __FUNCTION__, __LINE__, buffer);
+        strResponse = buffer;
+        
+        // 创建 lic_response 文件并写入数据
+        int lic_response_fd = open(lic_response, O_CREAT | O_WRONLY | O_TRUNC, 0777);
+        if (lic_response_fd < 0) {
+            XLOGE("%s: %d Failed to create lic_response file\n", __FUNCTION__, __LINE__);
+            return XBH_FAILURE;
+        }
+
+        ssize_t writelen = write(lic_response_fd, strResponse.c_str(), strResponse.size());
+        close(lic_response_fd);
+
+        if (writelen != (ssize_t)strResponse.size()) {
+            XLOGE("%s: %d Failed to write data to lic_response\n", __FUNCTION__, __LINE__);
+            return XBH_FAILURE;
+        }
+
+        XLOGD("%s: %d Wrote response data to lic_response: %s\n", __FUNCTION__, __LINE__, strResponse.c_str());
+    }
+    return XBH_SUCCESS;
+}
+
 
 //override
 XBH_S32 XbhMtk_8195::setHdcpKey(const XBH_CHAR* pBuff, XBH_HDCP_TYPE_E type)
@@ -1409,8 +1558,19 @@ XBH_S32 XbhMtk_8195::setHdcpKey(const XBH_CHAR* pBuff, XBH_HDCP_TYPE_E type)
         if (s32Ret)
         {
             XLOGE("Error! writeDrmKeyByPath fail, ret = %d, path = %s", s32Ret, pBuff);
+            fclose(pfd);
             return XBH_FAILURE;
         }
+
+        if(type == XBH_HDCP_TYPE_E::XBH_HDCP1_4)
+        {
+            setHdcpKeyName("XBH_HDCP1_4", type);
+        }
+        else if( type == XBH_HDCP_TYPE_E::XBH_HDCP2_2)
+        {
+            setHdcpKeyName("XBH_HDCP2_2", type);
+        }
+        fclose(pfd);
         gNeedKeyUpdate = XBH_TRUE;
     }
     else if (type == XBH_HDCP_TYPE_E::XBH_HDCP_TX_1_4 || type == XBH_HDCP_TYPE_E::XBH_HDCP_TX_2_2)
@@ -1421,6 +1581,16 @@ XBH_S32 XbhMtk_8195::setHdcpKey(const XBH_CHAR* pBuff, XBH_HDCP_TYPE_E type)
             XLOGE("HDCPTX key write error, filepatch: %s!!!", pBuff);
             return XBH_FAILURE;
         }
+
+        if(type == XBH_HDCP_TYPE_E::XBH_HDCP_TX_1_4)
+        {
+            setHdcpKeyName("XBH_HDCP_TX_1_4", type);
+        }
+        else if( type == XBH_HDCP_TYPE_E::XBH_HDCP_TX_2_2)
+        {
+            setHdcpKeyName("XBH_HDCP_TX_2_2", type);
+        }
+        gNeedKeyUpdate = XBH_TRUE;
     }
     else
     {
@@ -1503,6 +1673,22 @@ XBH_S32 XbhMtk_8195::setHdcpKeyName(const XBH_CHAR* strHdcpFileName, XBH_HDCP_TY
             XLOGE("Error! setNvramValue fail, ret = %d, name = %s, type = %d\n", s32Ret, strHdcpFileName, type);
         }
     }
+    else if(type == XBH_HDCP_TYPE_E::XBH_HDCP_TX_1_4)
+    {
+        s32Ret = setNvramValue(HDCPTX_14_NAME_OFFSET, HDCPTX_14_NAME_LEN, (XBH_VOID*)strHdcpFileName);
+        if (s32Ret)
+        {
+            XLOGE("Error! setNvramValue fail, ret = %d, name = %s, type = %d\n", s32Ret, strHdcpFileName, type);
+        }
+    }
+    else if(type == XBH_HDCP_TYPE_E::XBH_HDCP_TX_2_2)
+    {
+        s32Ret = setNvramValue(HDCPTX_22_NAME_OFFSET, HDCPTX_22_NAME_LEN, (XBH_VOID*)strHdcpFileName);
+        if (s32Ret)
+        {
+            XLOGE("Error! setNvramValue fail, ret = %d, name = %s, type = %d\n", s32Ret, strHdcpFileName, type);
+        }
+    }
     else
     {
         XLOGE("Error! Unknown hdcp type: %d\n", type);
@@ -1531,6 +1717,22 @@ XBH_S32 XbhMtk_8195::getHdcpKeyName(XBH_HDCP_TYPE_E type, XBH_CHAR* strHdcpFileN
             XLOGE("Error! getNvramValue fail, ret = %d, name = %s, type = %d\n", s32Ret, strHdcpFileName, type);
         }
     }
+    else if(type == XBH_HDCP_TYPE_E::XBH_HDCP_TX_1_4)
+    {
+        s32Ret = getNvramValue(HDCPTX_14_NAME_OFFSET, HDCPTX_14_NAME_LEN, (XBH_VOID*)strHdcpFileName);
+        if (s32Ret)
+        {
+            XLOGE("Error! getNvramValue fail, ret = %d, name = %s, type = %d\n", s32Ret, strHdcpFileName, type);
+        }
+    }
+    else if(type == XBH_HDCP_TYPE_E::XBH_HDCP_TX_2_2)
+    {
+        s32Ret = getNvramValue(HDCPTX_22_NAME_OFFSET, HDCPTX_22_NAME_LEN, (XBH_VOID*)strHdcpFileName);
+        if (s32Ret)
+        {
+            XLOGE("Error! getNvramValue fail, ret = %d, name = %s, type = %d\n", s32Ret, strHdcpFileName, type);
+        }
+    }
     else
     {
         XLOGE("Error! Unknown hdcp type: %d\n", type);
@@ -1538,9 +1740,13 @@ XBH_S32 XbhMtk_8195::getHdcpKeyName(XBH_HDCP_TYPE_E type, XBH_CHAR* strHdcpFileN
     }
     return s32Ret;
 }
+
 XBH_S32 XbhMtk_8195::setAudioOutput(XBH_AUDIO_OUTPUT_E enAudioOutput)
 {
     XBH_S32 s32Ret = XBH_SUCCESS;
+    XBH_BOOL status = XBH_FALSE;
+    XLOGD("setAudioOutput : %d\n", enAudioOutput);
+
     if (mAudioOutput != enAudioOutput)
     {
         switch (enAudioOutput)
@@ -1548,7 +1754,6 @@ XBH_S32 XbhMtk_8195::setAudioOutput(XBH_AUDIO_OUTPUT_E enAudioOutput)
             default:
             case XBH_AUDIO_OUTPUT_DET:
             {
-                XBH_BOOL status = XBH_FALSE;
                 XbhService::getModuleInterface()->getHpDetectStatus(&status);
                 if (status)
                 {
@@ -1576,8 +1781,20 @@ XBH_S32 XbhMtk_8195::setAudioOutput(XBH_AUDIO_OUTPUT_E enAudioOutput)
             }
             case XBH_AUDIO_OUTPUT_INTERNAL:
             {
-                XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_SPEAKER, XBH_FALSE);
-                XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_HEADPHONE, XBH_TRUE);
+
+                XbhService::getModuleInterface()->getHpDetectStatus(&status);
+                if (status)
+                {
+                    XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_SPEAKER, XBH_TRUE);
+                    XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_HEADPHONE, XBH_FALSE);
+                }
+                else
+                {
+                    XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_SPEAKER, XBH_FALSE);
+                    XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_HEADPHONE, XBH_TRUE);
+                }
+
+                setGpioOutputValue(XBH_BOARD_GPIO_DISPLAY_ARCSPIDF_SW, XBH_BOARD_GPIO_DISPLAY_ARCSPIDF_SW_SPIDF);
                 break;
             }
             case XBH_AUDIO_OUTPUT_USB:
@@ -1586,8 +1803,16 @@ XBH_S32 XbhMtk_8195::setAudioOutput(XBH_AUDIO_OUTPUT_E enAudioOutput)
                 XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_HEADPHONE, XBH_TRUE);
                 break;
             }
+            case XBH_AUDIO_OUTPUT_ARC:
+            {
+                XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_SPEAKER, XBH_TRUE);
+                setGpioOutputValue(XBH_BOARD_GPIO_DISPLAY_ARCSPIDF_SW, XBH_BOARD_GPIO_DISPLAY_ARCSPIDF_SW_ARC);
+                break;
+            }
         }
+
     }
+
     mAudioOutput = enAudioOutput;
     return s32Ret;
 }
@@ -1602,31 +1827,7 @@ XBH_S32 XbhMtk_8195::getAudioOutput(XBH_AUDIO_OUTPUT_E *enAudioOutput)
 XBH_S32 XbhMtk_8195::getEthPortSpeed(XBH_S32 port, XBH_S32* value)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
-    std :: string result;
-    XBH_S32 port_num, speed;
-    XbhSysOpt::getInstance()->readSysfs("/sys/class/rtl8367rb/phy/port_speeds", result);
-    if (!result.empty())
-    {
-        XLOGD("%s: %d result:%s!\n", __FUNCTION__, __LINE__, result.c_str());
-        const char* str = result.c_str();
-        while (*str != '\0')
-        {
-            if (sscanf(str, "port%d:%d", &port_num, &speed) == 2)
-            {
-                if (port_num == port)
-                {
-                    *value = speed;
-                    s32Ret = XBH_SUCCESS;
-                    break;
-                }
-            }
-            str = strchr(str, ' ');
-            if (str != nullptr)
-            {
-                str++;
-            }
-        }
-    }
+    XLOGW("this func is not implement");
     return s32Ret;
 }
 
@@ -1721,6 +1922,7 @@ XBH_S32 XbhMtk_8195::getSignalStatus(XBH_S32 *status)
 {
     XBH_S32 s32Ret = XBH_SUCCESS;
     struct HDMIRX_DEV_INFO deviceInfo;
+    XBH_CHAR propVal[PROPERTY_VALUE_MAX] = {0};
 
     int devFd = open(HDMIRX_DEV_PATH, O_RDWR);
     if (devFd < 0)
@@ -1732,11 +1934,46 @@ XBH_S32 XbhMtk_8195::getSignalStatus(XBH_S32 *status)
     if (s32Ret != 0)
     {
         XLOGE("Error! getDeviceInfo ioctl fail\n");
+        close(devFd);
         return XBH_FAILURE;
     }
 
-    *status = ((XBH_BOOL)(XBH_SIGNAL_STATUS_8195_SIGNAL == deviceInfo.state ) ? XBH_SIGNAL_STATUS_SUPPORT : XBH_SIGNAL_STATUS_NOSIGNAL);
+    //底层存在极低概率出现rx5v off。上层也存在第一次进信源无信号。
+    //第一次进通道重拉hdmirx，通知上层提升出图稳定性。
+    if(mCheckRx5v  < 1)
+    {
+        mCheckRx5v ++;
+        s32Ret = ioctl(devFd, MTK_HDMIRX_ENABLE, 0);
+        if (s32Ret != 0) 
+        {
+            XLOGE("Error! Disable HDMI RX failed\n");
+            close(devFd);
+            return XBH_FAILURE;
+         }
 
+         s32Ret = ioctl(devFd, MTK_HDMIRX_ENABLE, 1);
+         if (s32Ret != 0)
+         {
+             XLOGE("Error! Enable HDMI RX failed\n");
+             close(devFd);
+             return XBH_FAILURE;
+         }
+
+         if ((deviceInfo.hdmirx5v & 0x1)!= 0x1)
+         {
+             XLOGD("hdmirx5v is off !,HDMI RX reset completed");
+             property_set("persist.vendor.hdmirx.reset_error", "1");
+         }
+         else
+         {
+            property_get("persist.vendor.hdmirx.reset_error", propVal, "0");
+            XLOGD("hdmirx5v is on (%d), force reset rx, propVal  %s", deviceInfo.hdmirx5v, propVal);
+            usleep(1*1000*1000);//1s
+         }
+    }
+
+    *status = ((XBH_BOOL)(XBH_SIGNAL_STATUS_8195_SIGNAL == deviceInfo.state ) ? XBH_SIGNAL_STATUS_SUPPORT : XBH_SIGNAL_STATUS_NOSIGNAL);
+    close(devFd);
     return s32Ret;
 }
 
@@ -1749,6 +1986,164 @@ XBH_S32 XbhMtk_8195::getHdmiRxAudioSampleFreq(XBH_U32 *u32Data){
     return s32Ret;
 }
 
+XBH_S32 XbhMtk_8195::getHdmiRxAudioLocked(XBH_U32 *u32Data)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    struct HDMIRX_DEV_INFO deviceInfo;
+    int devFd = open(HDMIRX_DEV_PATH, O_RDWR);
+    if (devFd < 0)
+    {
+        XLOGE("Error! Open device fail: %s\n", HDMIRX_DEV_PATH);
+        return XBH_FAILURE;
+    }
+    s32Ret = ioctl(devFd, MTK_HDMIRX_DEV_INFO, &deviceInfo);
+    if (s32Ret != 0)
+    {
+        XLOGE("Error! getDeviceInfo ioctl fail\n");
+        close(devFd);
+        return XBH_FAILURE;
+    }
+
+    *u32Data = deviceInfo.aud_locked;
+    close(devFd);
+    return s32Ret;
+}
+
+//override
+XBH_S32 XbhMtk_8195::setGoogleKey(const XBH_CHAR* strPath)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    s32Ret = writeDrmKeyByPath(strPath);
+    if (s32Ret)
+    {
+        XLOGE("setGoogleKey error, filepatch: %s!!!", strPath);
+        return XBH_FAILURE;
+    }
+    XLOGD("setGoogleKey success!!!");
+    gNeedKeyUpdate = XBH_TRUE;
+    return  s32Ret;
+}
+
+//override
+XBH_S32 XbhMtk_8195::getGoogleKeyStatus(XBH_BOOL* bEnable)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+
+    if (gNeedKeyUpdate)
+    {
+        s32Ret = updateDrmKeyStatus(gKeyStatus);
+        if (s32Ret)
+        {
+            *bEnable = XBH_FALSE;
+            XLOGE("Error! updateDrmKeyStatus fail, ret = %d", s32Ret);
+            return XBH_FAILURE;
+        }
+        gNeedKeyUpdate = XBH_FALSE;
+    }
+    *bEnable = (gKeyStatus[KEYMASTER_ATTEST_KEY] == 1 ? XBH_TRUE : XBH_FALSE);
+    XLOGD("gKeyStatus[KEYMASTER_ATTEST_KEY] = %d", *bEnable);
+
+    return s32Ret;
+}
+
+//override
+XBH_S32 XbhMtk_8195::setGoogleKeyName(const XBH_CHAR* strPath)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    s32Ret  = XbhPartitionData::getInstance()->setGoogleKeyName((XBH_VOID *)strPath);
+    return s32Ret;
+}
+
+//override
+XBH_S32 XbhMtk_8195::getGoogleKeyName(XBH_CHAR* strPath)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    s32Ret  = XbhPartitionData::getInstance()->getGoogleKeyName((XBH_VOID *)strPath);
+    return s32Ret;
+}
+
+//override
+XBH_S32 XbhMtk_8195::setAttentionKey(const XBH_CHAR* strPath)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    s32Ret = writeDrmKeyByPath(strPath);
+    if (s32Ret)
+    {
+        XLOGE("setAttentionKey error, filepatch: %s!!!", strPath);
+        return XBH_FAILURE;
+    }
+    XLOGD("setAttentionKey success!!!");
+    gNeedKeyUpdate = XBH_TRUE;
+    return s32Ret;
+}
+
+//override
+XBH_S32 XbhMtk_8195::getAttentionKeyStatus(XBH_BOOL* enable)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+
+    if (gNeedKeyUpdate)
+    {
+        s32Ret = updateDrmKeyStatus(gKeyStatus);
+        if (s32Ret)
+        {
+            *enable = XBH_FALSE;
+            XLOGE("Error! updateDrmKeyStatus fail, ret = %d", s32Ret);
+            return XBH_FAILURE;
+        }
+        gNeedKeyUpdate = XBH_FALSE;
+    }
+    *enable = (gKeyStatus[KEYMASTER_ATTEST_ID] == 1 ? XBH_TRUE : XBH_FALSE);
+    XLOGD("gKeyStatus[KEYMASTER_ATTEST_ID] = %d", *enable);
+
+    return s32Ret;
+}
+
+//override
+XBH_S32 XbhMtk_8195::setRkpStatus(const XBH_CHAR* data)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    s32Ret  = XbhPartitionData::getInstance()->setRkpStatus(data);
+    XLOGD("setRkpStatus data=%s\n", data);
+    return  s32Ret;
+}
+
+//override
+XBH_S32 XbhMtk_8195::getRkpStatus(XBH_CHAR* data)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    s32Ret  = XbhPartitionData::getInstance()->getRkpStatus(data);
+    XLOGD("getRkpStatus data=%s\n", data);
+    return  s32Ret;
+}
+
+/**通过本类public去调用setNvramValue**/
+XBH_S32 XbhMtk_8195::updateNvmStr(XBH_CHAR* data)
+{
+    return setNvramValue(BARCODE_OFFSET, BARCODE_LEN, (XBH_VOID*)data);
+}
+
+/**
+* 处理type-b信源下热拔插事件
+* param[in] src 当前信源
+* retval 0:success,-1:failure
+*/
+XBH_S32 XbhMtk_8195::ProcessTypeBHotplug(XBH_SOURCE_E src)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    return  s32Ret;
+}
+
+/**
+* 处理type-c信源下热拔插事件
+* param[in] src 当前信源
+* retval 0:success,-1:failure
+*/
+XBH_S32 XbhMtk_8195::ProcessTypeCHotplug(XBH_SOURCE_E src)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    return  s32Ret;
+}
 //------------------ public function begin -----------------------------
 
 //------------------ private function begin -----------------------------
@@ -1814,8 +2209,10 @@ XBH_S32 XbhMtk_8195::getMcuGpioValue(XBH_S32 u8Group, XBH_S32 u8GpioNum, XBH_S32
     //XLOGD("--setChipI2cData cmd: %02x, len: %d, data %02x:%02x:%02x:%02x ,level:%d\n", stInData.cmd, stInData.len, stInData.data[0], stInData.data[1], stInData.data[2],stInData.data[3],unGpioGet.attr.level);
     if (ret != XBH_SUCCESS)
     {
-        XLOGE("Error! setChipI2cData ret: %d, cmd: %02x, len: %d, data %02x:%02x:%02x:%02x \n", ret, stInData.cmd, stInData.len, stInData.data[0], stInData.data[1], stInData.data[2],stInData.data[3]);
+        XLOGE("Error! setChipI2cData ret: %d, cmd: %02x, len: %d, data %02x:%02x:%02x:%02x,return failure \n", ret, stInData.cmd, stInData.len, stInData.data[0], stInData.data[1], stInData.data[2],stInData.data[3]);
+        return XBH_FAILURE;
     }
+    usleep(1000);//1ms
     ret |= getChipI2cData(XBH_FUNC_MCU_I2C_NUM, XBH_FUNC_MCU_I2C_ADDR, stInData.cmd, 0x01, stInData.len, stInData.data);
     if (ret == XBH_SUCCESS)
     {
@@ -1827,7 +2224,8 @@ XBH_S32 XbhMtk_8195::getMcuGpioValue(XBH_S32 u8Group, XBH_S32 u8GpioNum, XBH_S32
     }
     else
     {
-        XLOGE("Error! getChipI2cData ret: %d, cmd: %02x, len: %d, data %02x:%02x:%02x:%02x\n", ret, stInData.cmd, stInData.len, stInData.data[0], stInData.data[1], stInData.data[2],stInData.data[3]);
+        XLOGE("Error! getChipI2cData ret: %d, cmd: %02x, len: %d, data %02x:%02x:%02x:%02x,return failure\n", ret, stInData.cmd, stInData.len, stInData.data[0], stInData.data[1], stInData.data[2],stInData.data[3]);
+        return XBH_FAILURE;
     }
 #endif
     //XLOGD("--getMcuGpioValue port: %d, pin: %d, level:%d\n", unGpioGet.attr.port ,unGpioGet.attr.pin ,unGpioGet.attr.level);
@@ -1969,6 +2367,7 @@ XBH_S32 XbhMtk_8195::setChipI2cData(XBH_U32 u32I2cNum, XBH_U8 u8DevAddress, XBH_
     XBH_S32 s32Ret = XBH_SUCCESS;
     XBH_U32 i = 0;
     XBH_U8 regAddr[4];
+    XBH_U32 u32retries = 0;
     for (i = 0; i < u32RegAddrCount; i++)
     {
         regAddr[i] = (XBH_U8)((u32RegAddr >> (8 * (u32RegAddrCount -1 - i))) & 0xff);
@@ -1981,10 +2380,19 @@ XBH_S32 XbhMtk_8195::setChipI2cData(XBH_U32 u32I2cNum, XBH_U8 u8DevAddress, XBH_
     XBH_UCHAR Addrbuff[1024];
     XBH_CHAR filename[20];
     fd = openI2cDev(u32I2cNum, filename, sizeof(filename), 0);
-    if (fd < 0 || checkI2cFunc(fd) < 0)
+    if (fd < 0)
     {
-            return XBH_FAILURE;
+        XLOGE("open fd error !!!! fd = %d u32I2cNum = 0x%02x ", fd, u32I2cNum);
+        return XBH_FAILURE;
     }
+
+    if (checkI2cFunc(fd) < 0)
+    {
+        XLOGE("checkI2cFunc  fd error !!!! fd = %d u32I2cNum = 0x%02x ", fd, u32I2cNum);
+        close(fd);
+        return XBH_FAILURE;
+    }
+
 
     data.nmsgs = 1;
     data.msgs = (struct i2c_msg *)malloc(data.nmsgs *sizeof(struct i2c_msg));
@@ -2063,10 +2471,20 @@ XBH_S32 XbhMtk_8195::setChipI2cData(XBH_U32 u32I2cNum, XBH_U8 u8DevAddress, XBH_
     data.msgs[0].addr = u8DevAddress;
     data.msgs[0].flags = 0;     // 0: write 1:read
     data.msgs[0].buf = Addrbuff;
-    s32Ret = ioctl(fd, I2C_RDWR, (unsigned long)&data);
+
+    do {
+        s32Ret = ioctl(fd, I2C_RDWR, (unsigned long)&data);
+        if (s32Ret < 0) 
+        {
+           u32retries++;
+           usleep(10000);//10 ms
+        }
+    } while (s32Ret < 0 && u32retries < MAX_RETRIES);
+
     if (s32Ret < 0)
     {
-        XLOGE("I2cNum : %d - 0x%x write reg 0x%x = 0x%x error : %d\r\n",u32I2cNum, u8DevAddress, u32RegAddr, *u8Data, s32Ret);
+        XLOGE("u32I2cNum : %d - 0x%x write reg 0x%x = 0x%x error : %d. Retry: %d strerror:%s",
+              u32I2cNum, u8DevAddress, u32RegAddr, *u8Data, s32Ret, MAX_RETRIES, strerror(errno));
         close(fd);
         free(data.msgs);
         return XBH_FAILURE;
@@ -2081,6 +2499,7 @@ XBH_S32 XbhMtk_8195::getChipI2cData(XBH_U32 u32I2cNum, XBH_U8 u8DevAddress, XBH_
 {
     XBH_S32 s32Ret = XBH_SUCCESS;
     XBH_U32 i = 0;
+    XBH_U32 u32retries = 0;
     XBH_U8 regAddr[4];
     for (i = 0; i < u32RegAddrCount; i++)
     {
@@ -2094,9 +2513,17 @@ XBH_S32 XbhMtk_8195::getChipI2cData(XBH_U32 u32I2cNum, XBH_U8 u8DevAddress, XBH_
 
     fd = openI2cDev(u32I2cNum, filename, sizeof(filename), 0);
 
-    if (fd < 0 || checkI2cFunc(fd) < 0)
+
+    if (fd < 0)
     {
-        XLOGE("fd error !!!! fd = %d u32I2cNum = 0x%02x ", fd, u32I2cNum);
+        XLOGE("open fd error !!!! fd = %d u32I2cNum = 0x%02x ", fd, u32I2cNum);
+        return XBH_FAILURE;
+    }
+
+    if (checkI2cFunc(fd) < 0)
+    {
+        XLOGE("checkI2cFunc  fd error !!!! fd = %d u32I2cNum = 0x%02x ", fd, u32I2cNum);
+        close(fd);
         return XBH_FAILURE;
     }
 
@@ -2153,10 +2580,19 @@ XBH_S32 XbhMtk_8195::getChipI2cData(XBH_U32 u32I2cNum, XBH_U8 u8DevAddress, XBH_
     data.msgs[1].flags = I2C_M_RD;    // 0: write 1:read
     data.msgs[1].buf = u8Data;
 
-    s32Ret = ioctl(fd, I2C_RDWR, (unsigned long)&data);
+    do {
+        s32Ret = ioctl(fd, I2C_RDWR, (unsigned long)&data);
+        if (s32Ret < 0)
+        {
+            u32retries++;
+            usleep(10000);//10 ms
+        }
+    } while (s32Ret < 0 && u32retries < MAX_RETRIES);
+
     if (s32Ret < 0)
     {
-        XLOGE("I2cNum : %d - 0x%x read reg 0x%x error : %d\r\n",u32I2cNum, u8DevAddress, u32RegAddr, s32Ret);
+        XLOGE("u32I2cNum : %d - 0x%x read reg 0x%x error : %d. Retry: %d strerror:%s,",
+              u32I2cNum, u8DevAddress, u32RegAddr, s32Ret, MAX_RETRIES, strerror(errno));
         close(fd);
         free(data.msgs);
         return XBH_FAILURE;
@@ -2287,6 +2723,7 @@ std::vector<std::string> XbhMtk_8195::toHexStringArr(const std::string& s)
 
 XBH_S32 XbhMtk_8195::setNvramValue(XBH_S32 offset, XBH_S32 size, XBH_VOID *buff)
 {
+    XbhMutex::Autolock lock(m_NvmLock); //预防多进程调用添加同步锁机制
     char retStr[CFG_FILE_PRODUCT_INFO_SIZE * 2] = {0};
     std::vector<uint8_t> buffArr(CFG_FILE_PRODUCT_INFO_SIZE);
     XLOGD("setNvramValue offset = %d, size = %d\n", offset, size);
@@ -2390,6 +2827,12 @@ XBH_S32 XbhMtk_8195::getNvramValue(XBH_S32 offset, XBH_S32 size, XBH_VOID *buff)
 
     return 0;
 }
+XBH_S32 XbhMtk_8195::setMcuEnableKeyPower()
+{
+#define CMD_I2C_SET_KEY_POWER   0xE4
+    XBH_U8  pu8Data[2] = {0x01, 0x02};
 
+    return  setIICData(XBH_FUNC_MCU_I2C_NUM, XBH_FUNC_MCU_I2C_ADDR, CMD_I2C_SET_KEY_POWER, 1, 2, pu8Data);
+}
 
 //------------------ private function end -----------------------------

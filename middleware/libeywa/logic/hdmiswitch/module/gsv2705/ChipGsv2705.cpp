@@ -21,7 +21,7 @@ XbhMutex                        ChipGsv2705::mLock;
 
 ChipGsv2705::ChipGsv2705(XBH_S32 i2cNumber, XBH_S32 i2cAddress, XBH_S32 powerGpio, XBH_S32 powerLevel ,XBH_S32 resetGpio, XBH_S32 resetLevel , XBH_S32 defaultPort , HDMI_SWITCH_PORT u8SwitchPort, XBH_U8 level)
 {
-    XLOGD(" start level = %d ", level);
+    XLOGD(" start level = %d mResetGpio =%d,  mHasNextPort =%d", level, mResetGpio, mHasNextPort);
     this->mI2cNumber = i2cNumber;
     this->mI2cAddress = i2cAddress;
     this->mPowerGpio = powerGpio;
@@ -34,6 +34,8 @@ ChipGsv2705::ChipGsv2705(XBH_S32 i2cNumber, XBH_S32 i2cAddress, XBH_S32 powerGpi
 
     if(mPowerGpio != -1)
     {
+        XbhService::getModuleInterface()->setGpioOutputValue(mPowerGpio, !mPowerLevel);
+        usleep(100*1000);
         XbhService::getModuleInterface()->setGpioOutputValue(mPowerGpio, mPowerLevel);
         usleep(100*1000);
     }
@@ -59,6 +61,18 @@ ChipGsv2705::ChipGsv2705(XBH_S32 i2cNumber, XBH_S32 i2cAddress, XBH_S32 powerGpi
         XbhService::getModuleInterface()->setGpioOutputValue(mResetGpio, mResetLevel);
         usleep(100 * 1000);
     }
+    else
+    {
+        //当不支持硬件复位时，使用软件复位
+        //当存在后一级switch的时候需要等待后一级switch初始化完成
+        if(mHasNextPort)
+        {
+            usleep(2 * level * 1000 * 1000);
+        }
+        XBH_U8 resetData = CMD_RESET; //软复位
+        XbhService::getModuleInterface()->setI2cData(mI2cNumber, mI2cAddress, REG_HPD_ASSERT_CTRL, 2, 1, &resetData);
+        usleep(100 * 1000);
+    }
 
     if(0x01 == m_u8SwitchPort.port0)
     {
@@ -78,6 +92,7 @@ ChipGsv2705::ChipGsv2705(XBH_S32 i2cNumber, XBH_S32 i2cAddress, XBH_S32 powerGpi
     }
     setActivePort(mDefaultPort);
 #if defined(XBH_HDMI_SWITCH_WATCHDOG_GSV)
+    mWdtRunning == GSV2705_WDT_READY;
     wdtStart();
 #endif
     XLOGD(" end ");
@@ -322,7 +337,7 @@ XBH_S32 ChipGsv2705::upgradeFirmware(const XBH_CHAR* strFilePath, XBH_BOOL bForc
     }
     strcpy (file_name, strFilePath);
 #if defined(XBH_HDMI_SWITCH_WATCHDOG_GSV)
-    mWdtRunning = 0;
+    mWdtRunning = GSV2705_WDT_UPGRADING;
 #else
     XbhMWThread::run(XbhMWThread::ONCE);
 #endif
@@ -352,6 +367,7 @@ RESET:
     }
     sprintf(strVersion, "%02X%02X", data[0], data[1]);
     XLOGD("getFirmwareVersion  =  %s",strVersion);
+    property_set("persist.vendor.xbh.gsv2705_board.ver", strVersion);
     return s32Ret;
 }
 
@@ -887,18 +903,24 @@ void ChipGsv2705::wdtStart()
 {
 #if defined(XBH_HDMI_SWITCH_WATCHDOG_GSV)
     XLOGD("wdtStart  mWdtRunning :%d", mWdtRunning);
-    if(!mWdtRunning)
+    if(mWdtRunning == GSV2705_WDT_READY)
     {
-         mWdtRunning = 1;
+         mWdtRunning = GSV2705_WDT_STARTING;
          XbhMWThread::run(XbhMWThread::REPEAT);
     }
 #endif
+
 }
 
-void ChipGsv2705::run(const void* arg)
-{
+void ChipGsv2705::run(const void* arg)  {
 #if defined(XBH_HDMI_SWITCH_WATCHDOG_GSV)
-    if(mWdtRunning)
+    if(mWdtRunning == GSV2705_WDT_STARTING)
+    {
+        XLOGW("\n wdt start run,sleep 3 s. \n");
+        usleep(3*1000 * 1000);
+        mWdtRunning = GSV2705_WDT_RUNNING;
+    }
+    else if(mWdtRunning == GSV2705_WDT_RUNNING)
     {
         XBH_U8 first_value[2];
         XBH_U8 current_value[2];
@@ -939,95 +961,96 @@ void ChipGsv2705::run(const void* arg)
             usleep(3*1000 * 1000);
         }
     }
-    else 
+    else if(mWdtRunning == GSV2705_WDT_UPGRADING)
 #endif
     {
-            XLOGI("[%s:%d]  file name: %s", __func__, __LINE__, file_name);
-            XBH_S32 fd = 0;
-            XBH_S32 ret = 0;
-            XBH_S32 read_num = 0;
-            XBH_CHAR* FWVer = (char *)malloc(10);
-        
-            RXDDCCmd = 0;
-            McuRunAtBTag = -1;
-            RXDDCDataPoint = 0;
-        
-            upgradeState = GSV2705Upgrade_RUNNING;
-            if (appI2CUpdateInit() == 1)
+        XLOGI("[%s:%d]  file name: %s", __func__, __LINE__, file_name);
+        XBH_S32 fd = 0;
+        XBH_S32 ret = 0;
+        XBH_S32 read_num = 0;
+        XBH_CHAR* FWVer = (char *)malloc(10);
+
+        RXDDCCmd = 0;
+        McuRunAtBTag = -1;
+        RXDDCDataPoint = 0;
+
+        upgradeState = GSV2705Upgrade_RUNNING;
+        property_set("persist.vendor.xbh.gsv2705_board.ver", "");
+
+        if (appI2CUpdateInit() == 1)
+        {
+            XLOGD ("[%s:%d] mcu run at partition B, upgrade partition A", __func__, __LINE__);
+            patition_start_addr = XBH_GSV2705_PARTITION_A_ADDR; //4k
+        }
+        else if (appI2CUpdateInit() == 0)
+        {
+            XLOGD ("[%s:%d] mcu run at partition A, upgrade partition B", __func__, __LINE__);
+            patition_start_addr = XBH_GSV2705_PARTITION_B_ADDR; //256k
+        }
+        else
+        {
+            XLOGD ("[%s:%d] Error: Can`t Start Upgrade!!!", __func__, __LINE__);
+            upgradeState = GSV2705Upgrade_FAILURE;
+            goto end;
+        }
+
+        fd = open(file_name, O_RDONLY);
+        if (fd <= 0)
+        {
+            XLOGE("[%s:%d] open Error: ", __func__, __LINE__);
+            upgradeState = GSV2705Upgrade_FAILURE;
+            goto end;
+        }
+
+        if (lseek (fd, patition_start_addr, SEEK_SET) < 0)
+        {
+            XLOGE("[%s:%d] lseek Error: ", __func__, __LINE__);
+            close (fd);
+            upgradeState = GSV2705Upgrade_FAILURE;
+            goto end;
+        }
+
+        XLOGD ("[%s:%d] read file...", __func__,  __LINE__);
+        while (read_num < (252 * 1024))
+        {
+            ret = read (fd, partition_data + read_num, 64);
+            if (ret < 0)
             {
-                XLOGD ("[%s:%d] mcu run at partition B, upgrade partition A", __func__, __LINE__);
-                patition_start_addr = XBH_GSV2705_PARTITION_A_ADDR; //4k
-            }
-            else if (appI2CUpdateInit() == 0)
-            {
-                XLOGD ("[%s:%d] mcu run at partition A, upgrade partition B", __func__, __LINE__);
-                patition_start_addr = XBH_GSV2705_PARTITION_B_ADDR; //256k
-            }
-            else
-            {
-                XLOGD ("[%s:%d] Error: Can`t Start Upgrade!!!", __func__, __LINE__);
-                upgradeState = GSV2705Upgrade_FAILURE;
-                goto end;
-            }
-        
-            fd = open(file_name, O_RDONLY);
-            if (fd <= 0)
-            {
-                XLOGE("[%s:%d] open Error: ", __func__, __LINE__);
-                upgradeState = GSV2705Upgrade_FAILURE;
-                goto end;
-            }
-        
-            if (lseek (fd, patition_start_addr, SEEK_SET) < 0)
-            {
-                XLOGE("[%s:%d] lseek Error: ", __func__, __LINE__);
+                XLOGE("[%s:%d] read partition Error!!!", __func__, __LINE__);
                 close (fd);
                 upgradeState = GSV2705Upgrade_FAILURE;
                 goto end;
             }
-        
-            XLOGD ("[%s:%d] read file...", __func__,  __LINE__);
-            while (read_num < (252 * 1024))
+            read_num +=  ret;
+        }
+        XLOGD ("[%s:%d] read file done", __func__,  __LINE__);
+        close (fd);
+
+        if ((partition_data[0x8e]  != dataGsv2705Buff[0]) || (partition_data[0x8f]  != dataGsv2705Buff[1]) || forceUpgrade)
+        {
+            upgradeState = GSV2705Upgrade_RUNNING;
+            if (appI2CUpdateServer(partition_data, 252 * 1024, patition_start_addr))
             {
-                ret = read (fd, partition_data + read_num, 64);
-                if (ret < 0)
-                {
-                    XLOGE("[%s:%d] read partition Error!!!", __func__, __LINE__);
-                    close (fd);
-                    upgradeState = GSV2705Upgrade_FAILURE;
-                    goto end;
-                }
-                read_num +=  ret;
+                upgradeState = GSV2705Upgrade_SUCCESS;
+                usleep(2*1000*1000);
+                reset();
+                usleep(2*1000*1000);
+                getFirmwareVersion(FWVer);
             }
-            XLOGD ("[%s:%d] read file done", __func__,  __LINE__);
-            close (fd);
-        
-            if ((partition_data[0x8e]  != dataGsv2705Buff[0]) || (partition_data[0x8f]  != dataGsv2705Buff[1]) || forceUpgrade)
+            else
             {
-                upgradeState = GSV2705Upgrade_RUNNING;
-                if (appI2CUpdateServer(partition_data, 252 * 1024, patition_start_addr))
-                {
-                    upgradeState = GSV2705Upgrade_SUCCESS;
-                    usleep(2*1000*1000);
-                    reset();
-                    usleep(2*1000*1000);
-                    getFirmwareVersion(FWVer);
-                    property_set("persist.vendor.xbh.gsv2705_board.ver", FWVer);
-                }
-                else
-                {
-                    upgradeState = GSV2705Upgrade_FAILURE;
-                }
+                upgradeState = GSV2705Upgrade_FAILURE;
             }
-        end:
-            if (partition_data != NULL)
-            {
-                // 释放空间
-                free (partition_data);
-            }
-            
+        }
+    end:
+        if (partition_data != NULL)
+        {
+            // 释放空间
+            free (partition_data);
+        }
+
 #if defined(XBH_HDMI_SWITCH_WATCHDOG_GSV)
-            mWdtRunning = 1;
+        mWdtRunning = GSV2705_WDT_STARTING;
 #endif
     }
 }

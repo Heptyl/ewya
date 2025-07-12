@@ -67,6 +67,8 @@ public:
     //override
     XBH_S32 setMute(XBH_AUDIO_CHANNEL_E enAudioChannel, XBH_BOOL bEnable);
     //override
+    XBH_S32 getMute(XBH_AUDIO_CHANNEL_E enAudioChannel, XBH_BOOL* bEnable);
+    //override
     XBH_S32 getMicDetectStatus(XBH_BOOL* status);
     //override
     XBH_S32 getHpDetectStatus(XBH_BOOL* status);

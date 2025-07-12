@@ -158,6 +158,7 @@ public:
 
     XBH_S32 getUpgradeState(XBH_S32 *pState);
 
+    XBH_S32 powerUpProtection();
 private:
     XBH_S32 mI2cNumber;
     XBH_S32 mI2cAddress;

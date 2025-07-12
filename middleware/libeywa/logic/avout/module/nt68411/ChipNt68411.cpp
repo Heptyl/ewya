@@ -269,6 +269,13 @@ XBH_S32 ChipNt68411::getHdmiTxPlugState(XBH_BOOL* info)
     XBH_U8 hdmiTxPlugOutNums = 0;
     XBH_S32 s32Ret = XBH_SUCCESS;
 
+    //如果68411在升级中则此函数直接返回
+    if(mState == XBH_UPGRADE_RUNNING)
+    {
+        XLOGD("ChipNt68411 upgrade in progress,getHdmiTxPlugState Failure\n");
+        return s32Ret;
+    }
+
     while(retryNums--)
     {
         XBH_U8 pu1WData[] = NT68411_HDMI_TX_PLUG_STATE;
@@ -1959,6 +1966,10 @@ XBH_S32 ChipNt68411::getUpgradeState(XBH_S32 * s32State)
 {
     XBH_S32 s32Ret = XBH_SUCCESS;
     *s32State = mState;
+    if(mState == XBH_UPGRADE_SUCCESS)
+    {
+        XLOGW("ChipNt68411 upgrade success");
+    }
     return s32Ret;
 }
 

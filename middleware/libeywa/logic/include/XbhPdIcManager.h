@@ -17,7 +17,7 @@ public:
     /**
      * 获取chip是否初始化完成
     */
-    XBH_S32 getChipInitDone(XBH_S32 devType, XBH_BOOL* enable);
+    XBH_S32 getChipInitDone(XBH_BOOL* enable);
     /**
      * 获取chip是否存在
     */

@@ -1037,7 +1037,7 @@ ChipRts5450M::ChipRts5450M(XBH_U32 i2cBus, XBH_U32 Addr, XBH_S32 pGpio, XBH_S32 
         usleep(50 * 1000);
         XbhService::getModuleInterface()->setGpioOutputValue(mRGpio, mRLevel);
     }
-
+    MP_SM_Enable_VDCMD(RTS5450_VDCMD_SMBUS_ENABLE);//初始化过程后对芯片发送指令，使能SUMBUS协议，方便能及时响应动态功率调正
     XLOGD(" end ");
 }
 

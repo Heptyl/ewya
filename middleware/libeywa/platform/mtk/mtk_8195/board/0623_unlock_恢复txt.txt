@@ -1,0 +1,144 @@
+[2025-06-26 16:48:25] true
+[2025-06-26 16:48:26] console:/ # 
+[2025-06-26 16:48:29] <6>[  513.189267][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]s:ckdt to analog,4295020589ms
+[2025-06-26 16:48:29] <6>[  513.189360][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]1,stream=0x0,un-mute.
+[2025-06-26 16:48:29] <6>[  513.189396][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]_40xMode=1,TmdsClkKhz=148607, Band=17
+[2025-06-26 16:48:29] <6>[  513.189420][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]_KHal_HDMIRx_BusyPolling2p1Port, 9
+[2025-06-26 16:48:29] <6>[  513.203099][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]lock: 0x117C=0x00009999, 0x9A8=0x00003000
+[2025-06-26 16:48:29] <6>[  513.213354][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]s:analog to digital,4295020595ms
+[2025-06-26 16:48:29] <6>[  513.214665][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]s:digital to timing,4295020595ms
+[2025-06-26 16:48:29] <6>[  513.529213][T301171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]stb,0,8700f00,5810d8,12800b0,a08c0,(20,20),4295020674ms
+[2025-06-26 16:48:29] <6>[  513.529282][T301171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]s:timing to stable,4295020674ms
+[2025-06-26 16:48:29] <6>[  513.529308][T301171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]ACP Type is Reserved.
+[2025-06-26 16:48:29] <6>[  513.529325][T301171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]hdmi_rx_notify: 5
+[2025-06-26 16:48:29] <6>[  513.531738][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]82 ptk changed
+[2025-06-26 16:48:29] <6>[  513.531781][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]myhdmi->u1hdrtype = 0;u1clrspc = 0
+[2025-06-26 16:48:29] <6>[  513.531802][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]SDR RGB->RGB
+[2025-06-26 16:48:29] <6>[  513.531823][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]RGB input
+[2025-06-26 16:48:29] <6>[  513.531841][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]hdmi_rx_notify: 6
+[2025-06-26 16:48:29] <6>[  513.532647][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]83 ptk changed
+[2025-06-26 16:48:29] <6>[  513.533173][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]84 ptk changed
+[2025-06-26 16:48:29] <6>[  513.533193][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]hdmi_rx_notify: 7
+[2025-06-26 16:48:29] <6>[  513.534011][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]3 ptk changed
+[2025-06-26 16:48:29] <6>[  513.534055][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]VSW_NFY_RES_CHGING,4295020675
+[2025-06-26 16:48:29] <6>[  513.541408][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]dvi2_stb_timing_search>
+[2025-06-26 16:48:29] <6>[  513.541454][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]>4400/2250/60/1352/0/2160/3840
+[2025-06-26 16:48:29] <6>[  513.541492][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]timing search
+[2025-06-26 16:48:29] <6>[  513.541510][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]bSearch= 43, id=43
+[2025-06-26 16:48:29] <6>[  513.541531][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]IVF=60
+[2025-06-26 16:48:29] <6>[  513.541549][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]IHF=1350
+[2025-06-26 16:48:29] <6>[  513.541568][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]IHTOTAL=2200
+[2025-06-26 16:48:29] <6>[  513.541587][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]IPH_WID=1920
+[2025-06-26 16:48:29] <6>[  513.541606][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]IPV_LEN=2205
+[2025-06-26 16:48:29] <6>[  513.541624][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]INTERLACE=0
+[2025-06-26 16:48:29] <6>[  513.541642][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]dvi2_is_3d_pkt_valid=0,0x0
+[2025-06-26 16:48:29] <6>[  513.541670][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]timing search
+[2025-06-26 16:48:29] <6>[  513.541686][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]bSearch= 108, id=108
+[2025-06-26 16:48:29] <6>[  513.541705][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]IVF=60
+[2025-06-26 16:48:29] <6>[  513.541723][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]IHF=1350
+[2025-06-26 16:48:29] <6>[  513.541740][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]IHTOTAL=4400
+[2025-06-26 16:48:30] <6>[  513.541758][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]IPH_WID=4096
+[2025-06-26 16:48:30] <6>[  513.541775][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]IPV_LEN=2160
+[2025-06-26 16:48:30] <6>[  513.541792][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]INTERLACE=0
+[2025-06-26 16:48:30] <6>[  513.541810][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]dvi2_is_3d_pkt_valid=0,0x0
+[2025-06-26 16:48:30] <6>[  513.541829][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]timing search
+[2025-06-26 16:48:30] <6>[  513.541845][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]bSearch= 110, id=110
+[2025-06-26 16:48:30] <6>[  513.541865][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]IVF=60
+[2025-06-26 16:48:30] <6>[  513.541882][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]IHF=1350
+[2025-06-26 16:48:30] <6>[  513.541900][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]IHTOTAL=4400
+[2025-06-26 16:48:30] <6>[  513.541917][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]IPH_WID=3840
+[2025-06-26 16:48:30] <6>[  513.541934][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]IPV_LEN=2160
+[2025-06-26 16:48:30] <6>[  513.541951][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]INTERLACE=0
+[2025-06-26 16:48:30] <6>[  513.541968][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]dvi2_is_3d_pkt_valid=0,0x0
+[2025-06-26 16:48:30] <6>[  513.541987][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]DviTiming=110
+[2025-06-26 16:48:30] <6>[  513.542008][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]audio state from ASTATE_AudioOff to ASTATE_RequestAudio
+[2025-06-26 16:48:30] <6>[  513.542035][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]VSW_NFY_RES_CHG_DONE,4295020677
+[2025-06-26 16:48:30] <6>[  513.542067][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]HDMI_RPT_PIXEL_MODE
+[2025-06-26 16:48:30] <6>[  513.542797][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]timing=110,MODE_3840_2160P_60
+[2025-06-26 16:48:30] <6>[  513.542829][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]ht=4400,vt=2250,vc=60,w=3840,h=2160,4295020677ms
+[2025-06-26 16:48:30] <6>[  513.553715][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]dvi state from DVI_NO_SIGNAL to DVI_CHK_MODECHG,4295020680
+[2025-06-26 16:48:30] <6>[  513.553886][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]aud2_setup, PCM or SPDIF
+[2025-06-26 16:48:30] <6>[  513.556370][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]audio state from ASTATE_RequestAudio to ASTATE_WaitForReady
+[2025-06-26 16:48:30] <6>[  513.769317][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr lock,fifo ok,180ms
+[2025-06-26 16:48:30] <6>[  513.769384][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]audio state from ASTATE_WaitForReady to ASTATE_AudioUnMute,
+[2025-06-26 16:48:30] <6>[  513.769410][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]Audio Un-Mute
+[2025-06-26 16:48:30] <6>[  513.807439][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]audio state from ASTATE_AudioUnMute, to ASTATE_AudioOn
+[2025-06-26 16:48:30] <6>[  513.807538][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]myhdmi->aud_caps.AudioFlag=0x80
+[2025-06-26 16:48:30] <6>[  513.807560][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]myhdmi->aud_caps.AudSrcEnable=0x1
+[2025-06-26 16:48:30] <6>[  513.807580][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]myhdmi->aud_caps.SampleFreq=0x2
+[2025-06-26 16:48:30] <6>[  513.807600][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]NON B_CAP_HBR_AUDIO
+[2025-06-26 16:48:30] <6>[  513.807693][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]NON B_CAP_DSD_AUDIO
+[2025-06-26 16:48:30] <6>[  513.807713][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]B_LAYOUT = 0, 2-Channel
+[2025-06-26 16:48:30] <6>[  513.807731][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]stream is PCM
+[2025-06-26 16:48:30] <6>[  513.807747][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]FS is 48kHz
+[2025-06-26 16:48:30] <6>[  513.807766][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]Get Audio MCLK  is 128FS
+[2025-06-26 16:48:30] <6>[  513.807784][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]I2S ch0 Valid
+[2025-06-26 16:48:30] <6>[  513.807802][ T1171] hdmirx_timer_kt: [name<6>[  513.840918][T201171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]myhdmi->u1hdrt<6>[  514.133000][T301171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]ACP Type is Reserved.
+[2025-06-26 16:48:30] <6>[  514.133046][T301171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]hdmi_rx_notify: 5
+[2025-06-26 16:48:30] <6>[  514.133701][T301171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]hdmi_rx_notify: 5
+[2025-06-26 16:48:31] <6>[  515.724952][T206234] kworker/u16:3: [name:mtk_hdmirx&][RX]hdcpver_work_handle
+[2025-06-26 16:48:31] <6>[  515.724995][T206234] kworker/u16:3: [name:mtk_hdmirx&][RX]hdmi_rx_notify: 10
+[2025-06-26 16:48:36] <6>[  520.537798][T201171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]SampleFreq 0x2(old) != 0x0(new).
+[2025-06-26 16:48:36] <6>[  520.537849][T201171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]audio state from ASTATE_AudioOn to ASTATE_AudioOff
+[2025-06-26 16:48:36] <6>[  520.537869][T201171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]AUDIO_UNLOCK,4295022426
+[2025-06-26 16:48:36] <6>[  520.538893][T201171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]Audio Mute
+[2025-06-26 16:48:36] <6>[  520.538930][T201171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]audio state from ASTATE_AudioOff to ASTATE_RequestAudio
+[2025-06-26 16:48:36] <6>[  520.549296][T201171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]aud2_setup, PCM or SPDIF
+[2025-06-26 16:48:36] <6>[  520.551604][T301171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]audio state from ASTATE_RequestAudio to ASTATE_WaitForReady
+[2025-06-26 16:48:36] <6>[  520.625066][T201171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]SampleFreq 0x0(old) != 0x2(new).
+[2025-06-26 16:48:36] <6>[  520.625103][T201171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]audio state from ASTATE_WaitForReady to ASTATE_RequestAudio
+[2025-06-26 16:48:36] <6>[  520.641184][T201171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]aud2_setup, PCM or SPDIF
+[2025-06-26 16:48:36] <6>[  520.643504][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]audio state from ASTATE_RequestAudio to ASTATE_WaitForReady
+[2025-06-26 16:48:36] <6>[  520.861038][T301171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr lock,fifo ok,180ms
+[2025-06-26 16:48:36] <6>[  520.861079][T301171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]audio state from ASTATE_WaitForReady to ASTATE_AudioUnMute,
+[2025-06-26 16:48:36] <6>[  520.861095][T301171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]Audio Un-Mute
+[2025-06-26 16:48:36] <6>[  520.897279][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]audio state from ASTATE_AudioUnMute, to ASTATE_AudioOn
+[2025-06-26 16:48:36] <6>[  520.897336][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]myhdmi->aud_caps.AudioFlag=0x80
+[2025-06-26 16:48:36] <6>[  520.897349][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]myhdmi->aud_caps.AudSrcEnable=0x1
+[2025-06-26 16:48:36] <6>[  520.897361][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]myhdmi->aud_caps.SampleFreq=0x2
+[2025-06-26 16:48:36] <6>[  520.897373][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]NON B_CAP_HBR_AUDIO
+[2025-06-26 16:48:36] <6>[  520.897384][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]NON B_CAP_DSD_AUDIO
+[2025-06-26 16:48:36] <6>[  520.897394][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]B_LAYOUT = 0, 2-Channel
+[2025-06-26 16:48:36] <6>[  520.897404][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]stream is PCM
+[2025-06-26 16:48:36] <6>[  520.897414][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]FS is 48kHz
+[2025-06-26 16:48:37] <6>[  520.897426][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]Get Audio MCLK  is 128FS
+[2025-06-26 16:48:37] <6>[  520.897436][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]I2S ch0 Valid
+[2025-06-26 16:48:37] <6>[  520.897446][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]I2S ch1 not Valid
+[2025-06-26 16:48:37] <6>[  520.897457][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]I2S ch2 not Valid
+[2025-06-26 16:48:37] <6>[  520.897468][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]I2S ch3 not Valid
+[2025-06-26 16:48:37] <6>[  520.897479][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]AUDIO_LOCK,4295022516
+[2025-06-26 16:48:37] <6>[  520.909721][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]Error : Audio Fifo Under-run.
+[2025-06-26 16:48:37] <6>[  520.909776][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]Afifo error
+[2025-06-26 16:48:37] <6>[  520.909790][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]Audio Mute
+[2025-06-26 16:48:37] <6>[  520.921180][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]Audio Un-Mute
+[2025-06-26 16:48:37] <6>[  520.933168][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock
+[2025-06-26 16:48:37] <6>[  520.949120][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock
+[2025-06-26 16:48:37] <6>[  520.961137][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock
+[2025-06-26 16:48:37] <6>[  520.972988][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock
+[2025-06-26 16:48:37] <6>[  520.997044][T301171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock
+[2025-06-26 16:48:37] <6>[  521.013193][T301171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock
+[2025-06-26 16:48:37] <6>[  521.024941][T301171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock
+[2025-06-26 16:48:37] <6>[  521.036974][T301171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock
+[2025-06-26 16:48:37] <6>[  521.053002][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock
+[2025-06-26 16:48:37] <6>[  521.201267][T201171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock
+[2025-06-26 16:48:37] <6>[  521.212984][T201171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock
+[2025-06-26 16:48:37] <6>[  521.225226][T201171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock
+[2025-06-26 16:48:37] <6>[  521.237286][T201171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock
+[2025-06-26 16:48:37] <6>[  521.248960][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock
+[2025-06-26 16:48:37] <6>[  521.261203][T201171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock
+[2025-06-26 16:48:37] <6>[  521.277174][ T1171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock
+[2025-06-26 16:48:43] <6>[  527.333255][T301171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]clear ptk: 0x84
+[2025-06-26 16:48:43] <6>[  527.333297][T301171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]hdmi_rx_notify: 7
+[2025-06-26 16:48:43] <6>[  527.801745][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock
+[2025-06-26 16:48:43] <6>[  527.814067][T101171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock
+[2025-06-26 16:48:43] <6>[  527.825100][T301171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]84 ptk changed
+[2025-06-26 16:48:43] <6>[  527.825142][T301171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]hdmi_rx_notify: 7
+[2025-06-26 16:48:43] <6>[  527.825670][T301171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock
+[2025-06-26 16:48:43] <6>[  527.837043][T201171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock
+[2025-06-26 16:48:43] <6>[  527.849366][T201171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock
+[2025-06-26 16:48:44] <6>[  528.182154][T201171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock
+[2025-06-26 16:48:44] <6>[  528.193088][T301171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock
+[2025-06-26 16:48:44] <6>[  528.205189][T301171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock
+[2025-06-26 16:48:44] <6>[  528.217287][T301171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock
+[2025-06-26 16:48:44] <6>[  528.229192][T301171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock
+[2025-06-26 16:48:44] <6>[  528.241040][T201171] hdmirx_timer_kt: [name:mtk_hdmirx&][RX]acr un-lock

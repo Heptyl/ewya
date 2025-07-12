@@ -22,7 +22,7 @@ PRODUCT_PACKAGES += \
 # apps
 PRODUCT_PACKAGES += \
     xbhfunc \
-    xbhfunc_new
+    xbhshell
 
 # sample code
 PRODUCT_PACKAGES += \

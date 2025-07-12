@@ -35,6 +35,11 @@
 #define GPIO_OSPEED_50MHZ                ((XBH_U8)0x03U)          /*!< output max speed 50MHz */
 #define GPIO_OSPEED_MAX                  ((XBH_U8)0x04U)          /*!< GPIO very high output speed, max speed more than 50MHz */
 
+
+
+/*  MAX I2C RETRY TIMES*/
+#define MAX_RETRIES                      5
+
 #define XBH_SIGNAL_STATUS_8195_SIGNAL    5
 #define HDMIRX_DEV_PATH "/dev/hdmirx"
 #define MTK_HDMIRX_DEV_INFO HDMI_IOWR(4, struct HDMIRX_DEV_INFO)
@@ -113,6 +118,10 @@ public:
     XBH_S32 setColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data);
     //override
     XBH_S32 getColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data);
+     //override
+    XBH_S32 setAndroidColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data);
+    //override
+    XBH_S32 getAndroidColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data);
     //override
     XBH_S32 setRtcTime(XBH_RTC_INFO_S* stRtcInfo);
     //override
@@ -179,6 +188,36 @@ public:
     XBH_S32 getSignalStatus(XBH_S32 *status);
     //override
     XBH_S32 getHdmiRxAudioSampleFreq(XBH_U32 *u32Data);
+    //override
+    XBH_S32 getHdmiRxAudioLocked(XBH_U32 *u32Data);
+    //override
+    XBH_S32 setGoogleKey(const XBH_CHAR* strPath);
+    //override
+    XBH_S32 getGoogleKeyStatus(XBH_BOOL* bEnable);
+    //override
+    XBH_S32 setGoogleKeyName(const XBH_CHAR* strPath);
+    //override
+    XBH_S32 getGoogleKeyName(XBH_CHAR* strPath);
+    //override
+    XBH_S32 setAttentionKey(const XBH_CHAR* strPath);
+    //override
+    XBH_S32 getAttentionKeyStatus(XBH_BOOL* enable);
+    //override
+    XBH_S32 setRkpStatus(const XBH_CHAR* data);
+    //override
+    XBH_S32 getRkpStatus(XBH_CHAR* data);
+    //override
+    XBH_S32 getMicLicenseState(XBH_S32* status);
+    //override
+    XBH_S32 ProcessTypeBHotplug(XBH_SOURCE_E src);
+    //override
+    XBH_S32 ProcessTypeCHotplug(XBH_SOURCE_E src);
+
+    //子类调用更新去写SN.
+    XBH_S32 updateNvmStr(XBH_CHAR* data);
+public:
+    XBH_AUDIO_OUTPUT_E mAudioOutput;
+
 private:
     //mcu gpio
     XBH_U8 calMcuGpioChecksum(XBH_MCU_GPIOPARA_U *gpioPara);
@@ -202,12 +241,15 @@ private:
     std::vector<std::string> toHexStringArr(const std::string& s);
     XBH_S32 setNvramValue(XBH_S32 offset, XBH_S32 size, XBH_VOID *buff);
     XBH_S32 getNvramValue(XBH_S32 offset, XBH_S32 size, XBH_VOID *buff);
+    //notify mcu enable keypower
+    XBH_S32 setMcuEnableKeyPower();
+    XBH_S32 handleLicenseFileMissing();
 private:
     XBH_S32 mGpioFd = -1;
     sp<INvram> mpINvram = nullptr;
     static XbhMutex m_McuLock;
+    static XbhMutex m_NvmLock;
     struct termios uart_debug_config;
-    XBH_AUDIO_OUTPUT_E mAudioOutput;
 };
 
 #endif //XBH_MTK_8195_H

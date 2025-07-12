@@ -229,6 +229,32 @@ XBH_S32 XbhAudioCodecManager::getMicHowling(XBH_BOOL* enable)
 }
 
 /**
+ * 设置MIC的防啸叫功能开关
+*/
+XBH_S32 XbhAudioCodecManager::setLineOutMode(XBH_LINEOUT_MODE_E enLineOutMode)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    if(m_pXbhAudioCodecTask != NULL)
+    {
+        s32Ret = m_pXbhAudioCodecTask->setLineOutMode(enLineOutMode);
+    }
+    return s32Ret;
+}
+
+/**
+ * 获取MIC的防啸叫功能开关
+*/
+XBH_S32 XbhAudioCodecManager::getLineOutMode(XBH_LINEOUT_MODE_E* enLineOutMode)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    if(m_pXbhAudioCodecTask != NULL)
+    {
+        s32Ret = m_pXbhAudioCodecTask->getLineOutMode(enLineOutMode);
+    }
+    return s32Ret;
+}
+
+/**
  * 获取chip是否初始化完成
 */
 XBH_S32 XbhAudioCodecManager::getChipInitDone(XBH_BOOL* enable)

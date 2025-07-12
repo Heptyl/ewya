@@ -76,12 +76,12 @@ XBH_S32 XbhPdIcManager::getChipExist(XBH_S32 devType, XBH_BOOL* enable)
 /**
  * 获取芯片状态
  */
-XBH_S32 XbhPdIcManager::getChipInitDone(XBH_S32 devType, XBH_BOOL* enable)
+XBH_S32 XbhPdIcManager::getChipInitDone(XBH_BOOL* enable)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
     if(m_pXbhPdIcTask != NULL)
     {
-        s32Ret = m_pXbhPdIcTask->getChipInitDone(devType, enable);
+        s32Ret = m_pXbhPdIcTask->getChipInitDone(enable);
     }
     return  s32Ret;
 }

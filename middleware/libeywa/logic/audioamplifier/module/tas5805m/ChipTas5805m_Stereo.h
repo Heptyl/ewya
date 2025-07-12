@@ -71,6 +71,20 @@ public:
     */
     XBH_S32 getEqEnable(XBH_BOOL *enable);
     /**
+    * 设置音频输出的前置增益
+    * param[in] enEqMode. EQ阶段
+    * param[out] s32Value. 增益值
+    * retval 0:success,-1:failure
+    */
+    XBH_S32 setAudioEq(XBH_EQ_MODE_E enEqMode, XBH_S32 s32Value);
+    /**
+    * 获取音频输出的前置增益
+    * param[in] enEqMode. EQ阶段
+    * param[out] s32Value. 增益值
+    * retval 0:success,-1:failure
+    */
+    XBH_S32 getAudioEq(XBH_EQ_MODE_E enEqMode, XBH_S32* s32Value);
+    /**
      * 设置低音增益
     * param[in] s32Value 增益值
     * retval 0:success,-1:failure
@@ -120,6 +134,8 @@ public:
     XBH_S32 getSoundMode(XBH_SOUND_MODE_E *enSoundMode);
 
     XBH_S32 matchlevel(XBH_SOUND_TYPE Type, XBH_S32 s32Value);
+    XBH_S32 frqGainLevel(XBH_EQ_MODE_E enEqMode, XBH_S32 s32Value);
+    XBH_S32 setEqReg(XBH_EQ_MODE_E enEqMode, XBH_S32 s32Value);
     /**
      * 设置环绕声开关
      * param[in] bEnable XBH_TRUE：开环绕声，XBH_FALSE：关环绕声

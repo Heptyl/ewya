@@ -18,7 +18,8 @@ XbhXMA311D2_Y            *XbhXMA311D2_Y::mInstance = XBH_NULL;
 XbhMutex                   XbhXMA311D2_Y::mLock;
 
 #define RTK8367RB_VB_WOL_DEV            "/sys/devices/virtual/rtl8367/phy/wol"
-
+#define EDID_VGA                        "/vendor/etc/projects/projectid_0/edid/vga.bin"
+#define XBH_EEPROM_ADDR         0xA0   //eeprom的设备地址
 XbhXMA311D2_Y::XbhXMA311D2_Y()
 {
     XLOGD(" begin ");
@@ -223,6 +224,31 @@ XBH_S32 XbhXMA311D2_Y::setMute(XBH_AUDIO_CHANNEL_E enAudioChannel, XBH_BOOL bEna
     return  s32Ret;
 }
 
+XBH_S32 XbhXMA311D2_Y::getMute(XBH_AUDIO_CHANNEL_E enAudioChannel, XBH_BOOL* bEnable)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_U32 u32GpioValue;
+    switch(enAudioChannel)
+    {
+        case XBH_AUDIO_CHANNEL_SPEAKER:
+            s32Ret = XbhAudioAmplifierManager::getInstance()->getMute(XBH_AUDIO_CHANNEL_STEREO, bEnable);
+            break;
+        case XBH_AUDIO_CHANNEL_HEADPHONE:
+            s32Ret = XbhAudioCodecManager::getInstance()->getHeadphoneMute(bEnable);
+            break;
+        case XBH_AUDIO_CHANNEL_MIC:
+            s32Ret = XbhAudioCodecManager::getInstance()->getMuteMicIn(bEnable);
+            break;
+        case XBH_AUDIO_CHANNEL_SUBWOOFER:
+            s32Ret = XbhAudioAmplifierManager::getInstance()->getMute(XBH_AUDIO_CHANNEL_SUBWOOFER, bEnable);
+            break;
+        default:
+            break;
+    }
+    XLOGD("getMute channel = %d mute = %d ",enAudioChannel, *bEnable);
+    return  s32Ret;
+}
+
 XBH_S32 XbhXMA311D2_Y::getMicDetectStatus(XBH_BOOL* status)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
@@ -353,7 +379,8 @@ XBH_S32 XbhXMA311D2_Y::setOnStop()
 XBH_S32 XbhXMA311D2_Y::getExtendIcVer(XBH_S32 devType, XBH_CHAR* ver)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
-    switch(devType) {
+    switch(devType)
+    {
         case XBH_UPDATE_FRONT_LT8711UXE1:
             s32Ret = XbhUsbc2HdmiManager::getInstance()->getFirmwareVersion(XBH_SOURCE_F_USBC1, ver);
             break;
@@ -384,7 +411,8 @@ XBH_S32 XbhXMA311D2_Y::getExtendIcVer(XBH_S32 devType, XBH_CHAR* ver)
 XBH_S32 XbhXMA311D2_Y::upgradeExtendIc(const XBH_CHAR* filename, XBH_BOOL force, XBH_U32 devType)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
-    switch(devType) {
+    switch(devType)
+    {
         case XBH_UPDATE_FRONT_LT8711UXE1:
             s32Ret = XbhUsbc2HdmiManager::getInstance()->upgradeFirmware(XBH_SOURCE_F_USBC1, filename, force);
             break;
@@ -413,12 +441,32 @@ XBH_S32 XbhXMA311D2_Y::upgradeExtendIc(const XBH_CHAR* filename, XBH_BOOL force,
     return  s32Ret;
 }
 
+
+XBH_S32 XbhXMA311D2_Y::upgradeExtendIcByData(XBH_U8 *data, XBH_U32 dataLen, XBH_BOOL force, XBH_U32 devType)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    switch(devType)
+    {
+        case XBH_UPDATE_FRONT_LT8711UXE1:
+            s32Ret = XbhUsbc2HdmiManager::getInstance()->upgradeFirmwareByData(XBH_SOURCE_F_USBC1, data, dataLen, force);
+            break;
+        default:
+            s32Ret = XBH_FAILURE;
+    }
+    return  s32Ret;
+}
+
+
 XBH_S32 XbhXMA311D2_Y::getUpgradeExtIcState(XBH_S32 devType, XBH_S32* s32Value)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
-    switch(devType) {
+    switch(devType)
+    {
         case XBH_UPDATE_FRONT_LT8711UXE1:
             s32Ret = XbhUsbc2HdmiManager::getInstance()->getUpgradeState(XBH_SOURCE_F_USBC1, s32Value);
+            break;
+        case XBH_UPDATE_BOARD_DEV6563_1:
+            s32Ret = XbhDp2HdmiManager::getInstance()->getUpgradeState(XBH_SOURCE_DP1,s32Value);
             break;
         case XBH_UPDATE_AUDIO_CODEC:
             s32Ret = XbhAudioCodecManager::getInstance()->getUpgradeState(s32Value);
@@ -429,9 +477,13 @@ XBH_S32 XbhXMA311D2_Y::getUpgradeExtIcState(XBH_S32 devType, XBH_S32* s32Value)
         case XBH_UPDATE_LT6711A:
             s32Ret = XbhAVOutManager::getInstance()->getUpgradeState(XBH_UPDATE_LT6711A, s32Value);
             break;
+        case XBH_UPDATE_BOARD_GSV2705_1:
+            s32Ret = XbhHdmiSwitchManager::getInstance()->getUpgradeState(XBH_UPDATE_BOARD_GSV2705_1, s32Value);
+            break;
         default:
             s32Ret = XBH_FAILURE;
     }
+    XLOGD("getUpgradeExtIcState :%d\n", * s32Value);
     return  s32Ret;
 }
 
@@ -442,6 +494,34 @@ XBH_S32 XbhXMA311D2_Y::setUsbLockMode(XBH_U32 u32UsbType)
     sprintf(type, "%d", u32UsbType);
     property_set("persist.vendor.xbh.usb_lock_mode", type);
     usleep(300 *1000);
+    if(u32UsbType == 0)
+    {
+        //enable front usb port and sider usb port----- type = 0
+        XLOGD("XbhSetUsbLockMode enable front usb port and sider usb port , type is %d\n", u32UsbType);
+        s32Ret = setGpioOutputValue(XBH_BOARD_GPIO_FUSB_PWREN_PIN, XBH_BOARD_GPIO_HIGH);
+        s32Ret = setGpioOutputValue(XBH_BOARD_GPIO_AUSB20_PWREN_PIN, XBH_BOARD_GPIO_HIGH);
+    } 
+    else if(u32UsbType == 1)
+    {
+        //just disable front usb port----- type = 1
+        XLOGD("XbhSetUsbLockMode just disable front usb port , type is %d\n", u32UsbType);
+        s32Ret = setGpioOutputValue(XBH_BOARD_GPIO_FUSB_PWREN_PIN, XBH_BOARD_GPIO_LOW);
+        
+    }
+    else if(u32UsbType == 2)
+    {
+        //just disable sider usb port----- type = 2
+        XLOGD("XbhSetUsbLockMode disable front usb port and sider usb port , type is %d\n", u32UsbType);
+        s32Ret = setGpioOutputValue(XBH_BOARD_GPIO_AUSB20_PWREN_PIN, XBH_BOARD_GPIO_LOW);
+    }
+    else if(u32UsbType == 3)
+    {
+        //disable front usb port and sider usb port ----- type = 3
+        XLOGD("XbhSetUsbLockMode enable front usb port , type is %d\n", u32UsbType);
+        s32Ret = setGpioOutputValue(XBH_BOARD_GPIO_FUSB_PWREN_PIN, XBH_BOARD_GPIO_LOW);
+        s32Ret = setGpioOutputValue(XBH_BOARD_GPIO_AUSB20_PWREN_PIN, XBH_BOARD_GPIO_LOW);
+    }
+
     return s32Ret;
 }
 
@@ -492,11 +572,34 @@ XBH_S32 XbhXMA311D2_Y::dumpEdid(XBH_SOURCE_E idx)
     return s32Ret;
 }
 
+XBH_S32 XbhXMA311D2_Y::initProjectIdConfig()
+{
+    //每次开机都需要更新edid的数据
+    XBH_S32 projectid = property_get_int32("persist.vendor.xbh.project_id", 0);
+    XLOGD("initProjectIdConfig projectid=%d \n", projectid);
+    XBH_HDMIRX_EDID_TYPE_E type;
+     if(projectid == 0)
+     {
+         //当VGA EDID没有更新时需要更新
+         if(property_get_int32("persist.vendor.xbh.vgaedid.update", 0) == 0)
+         {
+            
+             property_set("persist.vendor.xbh.vgaedid.update", "1");
+             XbhVgaEdidManager::getInstance()->setVgaEdid(EDID_VGA, XBH_SOURCE_VGA1);
+         }
+     }
+      else//其它projectid 从bin文件中获取
+     {
+        readAndUpdateEdidBinFile(projectid);
+    }
+    return XBH_SUCCESS;
+}
+
 XBH_S32 XbhXMA311D2_Y::setVgaEdidI2cData(XBH_U32 u32RegAddr, const XBH_U8* u8Data, XBH_U32 u32Length) 
 {
     XBH_S32 s32Ret = XBH_FAILURE;
 
-    I2CSimulator* pSimulator = I2CSimulator::getInstance(XBH_BOARD_GPIO_VGA_EEPROM_SDA, XBH_BOARD_GPIO_VGA_EEPROM_SCL);
+    I2CSimulator* pSimulator = I2CSimulator::getInstance(XBH_BOARD_GPIO_VGA_EEPROM_SDA, XBH_BOARD_GPIO_VGA_EEPROM_SCL, XBH_EEPROM_ADDR);
     if (pSimulator == nullptr) {
         XLOGD("Failed to create I2CSimulator instance\n");
         return XBH_FAILURE;
@@ -511,7 +614,7 @@ XBH_S32 XbhXMA311D2_Y::getVgaEdidI2cData(XBH_U32 u32RegAddr, XBH_U8* u8Data, XBH
 {
     XBH_S32 s32Ret = XBH_FAILURE;
 
-    I2CSimulator* pSimulator = I2CSimulator::getInstance(XBH_BOARD_GPIO_VGA_EEPROM_SDA, XBH_BOARD_GPIO_VGA_EEPROM_SCL);
+    I2CSimulator* pSimulator = I2CSimulator::getInstance(XBH_BOARD_GPIO_VGA_EEPROM_SDA, XBH_BOARD_GPIO_VGA_EEPROM_SCL, XBH_EEPROM_ADDR);
     if (pSimulator == nullptr) {
         XLOGD("Failed to create I2CSimulator instance\n");
         return XBH_FAILURE;
@@ -520,6 +623,72 @@ XBH_S32 XbhXMA311D2_Y::getVgaEdidI2cData(XBH_U32 u32RegAddr, XBH_U8* u8Data, XBH
     s32Ret = pSimulator->IIC_Read_Data(u32RegAddr, u8Data, u32Length);
 
     return s32Ret;
+}
+
+XBH_S32 XbhXMA311D2_Y::setHdmirxEdidType(XBH_HDMIRX_EDID_TYPE_E enType, int bd_idx)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_S32 type = 0;
+    switch(enType)
+    {
+        case XBH_HDMIRX_EDID_TYPE_14:
+            type = 1;
+            break;
+        case XBH_HDMIRX_EDID_TYPE_20:
+            type = 2;
+            break;
+        case XBH_HDMIRX_EDID_TYPE_21:
+            type = 3;
+            break;
+        case XBH_HDMIRX_EDID_TYPE_AUTO:
+            type = 4;
+            break;
+        default:
+            break;
+    }
+    s32Ret = XbhAmlogic_311d2::setHdmirxEdidType(type);
+    return  s32Ret;
+}
+
+XBH_S32 XbhXMA311D2_Y::getHdmirxEdidType(int bd_idx, XBH_HDMIRX_EDID_TYPE_E *enType)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_S32 type = 2;
+    s32Ret = XbhAmlogic_311d2::getHdmirxEdidType(&type);
+    if(type == 1)
+    {
+        *enType = XBH_HDMIRX_EDID_TYPE_14;
+    }
+    else if(type == 2)
+    {
+        *enType = XBH_HDMIRX_EDID_TYPE_20;
+    }
+    else if(type == 3)
+    {
+        *enType = XBH_HDMIRX_EDID_TYPE_21;
+    }
+    else if(type == 4)
+    {
+        *enType = XBH_HDMIRX_EDID_TYPE_AUTO;
+    }
+    return s32Ret;
+}
+
+XBH_S32 XbhXMA311D2_Y::readAndUpdateEdidBinFile(int projectid)
+{
+     if(projectid > 0)//分别读取4个bin文件，对应不同端口的edid
+    {
+        char edid20BinFilePath[128] = {0};
+        XBH_HDMIRX_EDID_TYPE_E type;
+        //当VGA EDID没有更新时需要更新
+        if(property_get_int32("persist.vendor.xbh.vgaedid.update", 0) == 0)
+        {
+            property_set("persist.vendor.xbh.vgaedid.update", "1");
+            snprintf(edid20BinFilePath, sizeof(edid20BinFilePath), "/vendor/etc/projects/projectid_%d/edid/vga.bin", projectid);
+            readAndUpdateEdidBinFileByEdidType(XBH_UPDATE_MS9282, edid20BinFilePath, XBH_HDMI_RXA);
+        }
+    }
+     return XBH_SUCCESS;
 }
 
 XbhXMA311D2_Y *XbhXMA311D2_Y::getInstance()

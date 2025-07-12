@@ -31,6 +31,10 @@ public:
     XBH_S32 setColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data);
     //get color temp value
     XBH_S32 getColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data);
+    //set android color temp value
+    XBH_S32 setAndroidColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data);
+    //get android color temp value
+    XBH_S32 getAndroidColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data);
     //set device id, 广告机部分客户的需求
     XBH_S32 setDeviceId(const XBH_CHAR* strDeviceId);
     //get device id, 广告机部分客户的需求
@@ -167,9 +171,31 @@ public:
     XBH_S32 setRkpStatus(const XBH_CHAR* data);
     //get rkpStatus data
     XBH_S32 getRkpStatus(XBH_CHAR* data);
+    //Set huawei production information
+    XBH_S32 setCustProductInfo(const XBH_CHAR * pBuff);
+    //Get huawei production information
+    XBH_S32 getCustProductInfo(XBH_CHAR * pBuff);
+    //将作为参考的RTC数据保存到不可擦除分区
+    XBH_S32 setReferRTCInfo(const XBH_CHAR* pBuff);
+    //从不可擦除分区读取作为参考的RTC数据
+    XBH_S32 getReferRTCInfo(XBH_CHAR* pBuff);
+    //BOE color gamma value的需求
+    XBH_S32 setGammaGroup(XBH_VOID * pBuff);
+    //BOE color gamma value的需求
+    XBH_S32 getGammaGroup(XBH_VOID * pBuff);
+    // 设置主固件升级标志位
+    XBH_S32 setUpgradeSystemFlag(XBH_VOID * pBuff);
+    // 获取主固件升级标志位
+    XBH_S32 getUpgradeSystemFlag(XBH_VOID * pBuff);
+    //将授权成功的response文件保存到不可擦除分区
+    XBH_S32 setMicLicResponse(const XBH_CHAR* strResponse);
+    //从不可擦除分区读取授权成功的response文件
+    XBH_S32 getMicLicResponse(XBH_CHAR* strResponse);
 
+//public    
     XBH_S32 writeDataToCusdata(XBH_U32 offset, XBH_U32 u32Length, const XBH_VOID* data);
     XBH_S32 readDataFromCusdata(XBH_U32 offset, XBH_U32 u32Length, XBH_VOID* data);
+    
 private:
     XBH_S32 setCusDataValue(XBH_U32 u32Offset, XBH_U32 u32Size, XBH_VOID * pBuff);
     XBH_S32 getCusDataValue(XBH_U32 u32Offset, XBH_U32 u32Size, XBH_VOID * pBuff);

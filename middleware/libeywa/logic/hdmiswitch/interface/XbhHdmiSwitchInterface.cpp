@@ -231,3 +231,13 @@ XBH_S32 XbhHdmiSwitchInterface::setTypecReset()
     XLOGW("this func is not implement");
     return  s32Ret;
 }
+
+/**
+ * get type-c Forward and Reverse Insertion Det
+ */
+ XBH_S32 XbhHdmiSwitchInterface::getUSBCForwardReverseInsertionDet(XBH_S32 *u32Value)
+ {
+     XBH_S32 s32Ret = XBH_FAILURE;
+     XLOGW("this func is not implement");
+     return  s32Ret;
+ }

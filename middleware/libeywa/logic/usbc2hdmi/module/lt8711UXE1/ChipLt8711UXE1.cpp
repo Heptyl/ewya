@@ -215,6 +215,38 @@ XBH_S32 ChipLt8711UXE1::upgradeFirmware(const XBH_CHAR* strFilePath, XBH_BOOL bF
 }
 
 /**
+ * 进行固件升级
+ */
+XBH_S32 ChipLt8711UXE1::upgradeFirmwareByData(XBH_U8 *data, XBH_U32 dataLen,XBH_BOOL bForceUpgrade)
+{
+    if (mState == LT8711_RUNNING)
+    {
+        XLOGW("Warning: lt8711 is updating...");
+        return XBH_FAILURE;
+    }
+
+    if (data == XBH_NULL)
+    {
+        XLOGE("Error: data is XBH_NULL");
+        return XBH_FAILURE;
+    }
+
+    //set force upgrade flag
+    mForceUpgrade = bForceUpgrade;
+    //mI2cNum = I2C_CHANNEL;
+
+    //set upgrade file name
+    g_data_buffer_len = dataLen;
+    XLOGD("dataLen=%d",dataLen);
+    memset(mFileName, 0x00, sizeof(mFileName));
+    memcpy(g_data_buffer, data, g_data_buffer_len);
+    XbhMWThread::run(XbhMWThread::ONCE);
+    return XBH_SUCCESS;
+}
+
+
+
+/**
  * 获取当前升级的进度
  */
 XBH_S32 ChipLt8711UXE1::getUpgradeState(XBH_S32 * s32State)
@@ -354,6 +386,14 @@ XBH_S32 ChipLt8711UXE1::open_upgrade_file(const char *upgrade_file_path)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
     XLOGD("\n===> %s\n",__FUNCTION__);
+
+    if(mFileName[0] == 0x00 )
+    {
+        g_crc_val = lt8711uxc_get_crc(g_data_buffer, g_data_buffer_len);
+        XLOGD("==> read upgrade file crc value:0x%02x\n",g_crc_val);
+        s32Ret = XBH_SUCCESS;
+        return s32Ret;
+    }
 
     FILE *fp = XBH_NULL;
     fp = fopen(upgrade_file_path, "r");

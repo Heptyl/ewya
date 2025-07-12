@@ -127,26 +127,30 @@ XBH_U8 I2CSimulator::IIC_Read_Data(XBH_U8 reg, XBH_U8 *pData, XBH_U8 Len)
     XBH_U8 i;
     IIC_Start();
 
-    IIC_SendByte(0xA0);
-    if (IIC_WaitAck()){
+    IIC_SendByte(m_slaveAddr);
+    if (IIC_WaitAck())
+    {
         XLOGE("Device no ack (device w)!!!");
         return -1;
     }
 
     IIC_SendByte(reg);
-    if (IIC_WaitAck()){
+    if (IIC_WaitAck())
+    {
         XLOGE("Device no ack (regist)!!!");
         return -1;
     }
 
     IIC_Start();
-    IIC_SendByte(0xA1);
-    if (IIC_WaitAck()){
+    IIC_SendByte(m_slaveAddr + 1);
+    if (IIC_WaitAck())
+    {
         XLOGE("Device no ack (device r)!!!");
         return -1;
     }
 
-    for(i = 0; i < Len; i++){
+    for(i = 0; i < Len; i++)
+    {
         pData[i] = IIC_ReadByte(i != (Len - 1));
     }
 
@@ -158,14 +162,16 @@ XBH_U8 I2CSimulator::IIC_Write_Data(XBH_U8 reg, const XBH_U8 *pData, XBH_U8 Len)
 {
     XBH_U32 i = 0;
     IIC_Start();
-    IIC_SendByte(0xA0);
-    if (IIC_WaitAck()){
+    IIC_SendByte(m_slaveAddr);
+    if (IIC_WaitAck())
+    {
         XLOGE("Device no ack (device w)!!!");
         IIC_Stop();
         return -1;
     }
     IIC_SendByte(reg);
-    if (IIC_WaitAck()){
+    if (IIC_WaitAck())
+    {
         XLOGE("Device no ack (regist)!!!");
         IIC_Stop();
         return -1;
@@ -173,7 +179,8 @@ XBH_U8 I2CSimulator::IIC_Write_Data(XBH_U8 reg, const XBH_U8 *pData, XBH_U8 Len)
     for(i = 0; i < Len; i++)
     {
         IIC_SendByte(pData[i]);
-        if (IIC_WaitAck()){
+        if (IIC_WaitAck())
+        {
             XLOGE("Device no ack (regist)!!!");
             IIC_Stop();
             return -1;
@@ -184,24 +191,25 @@ XBH_U8 I2CSimulator::IIC_Write_Data(XBH_U8 reg, const XBH_U8 *pData, XBH_U8 Len)
     return 0;
 }
 
-I2CSimulator::I2CSimulator(XBH_U32 sdaGpioPin, XBH_U32 sclGpioPin)
+I2CSimulator::I2CSimulator(XBH_U32 sdaGpioPin, XBH_U32 sclGpioPin, XBH_U8 slaveAddr)
 {
-    this->m_sdaGpioPin = sdaGpioPin;
-    this->m_sclGpioPin = sclGpioPin;
+    m_sdaGpioPin = sdaGpioPin;
+    m_sclGpioPin = sclGpioPin;
+    m_slaveAddr = slaveAddr;
 }
 
 I2CSimulator::~I2CSimulator()
 {
 }
 
-I2CSimulator *I2CSimulator::getInstance(XBH_U32 sdaGpioPin, XBH_U32 sclGpioPin)
+I2CSimulator *I2CSimulator::getInstance(XBH_U32 sdaGpioPin, XBH_U32 sclGpioPin, XBH_U8 slaveAddr)
 {
     if (!mInstance)
     {
         XbhMutex::Autolock _l(mLock);
         if (!mInstance)
         {
-            mInstance = new I2CSimulator(sdaGpioPin, sclGpioPin);
+            mInstance = new I2CSimulator(sdaGpioPin, sclGpioPin, slaveAddr);
         }
     }
     return mInstance;

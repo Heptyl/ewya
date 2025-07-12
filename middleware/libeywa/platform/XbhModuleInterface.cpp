@@ -2121,6 +2121,8 @@ XBH_S32 XbhModuleInterface::getHdmiSwitchI2cTable(HDMI_SW_OPT_TABLE list[][4])
             list[i][j].rLevel = switch_iic_table[i][j].rLevel;
             list[i][j].defaultPort = switch_iic_table[i][j].defaultPort;
             list[i][j].prePort = switch_iic_table[i][j].prePort;
+            list[i][j].sGpio2 = switch_iic_table[i][j].sGpio2;
+            list[i][j].sLevel2 = switch_iic_table[i][j].sLevel2;
         }
     }
 
@@ -2138,6 +2140,8 @@ XBH_S32 XbhModuleInterface::getHdmiSwitchI2cTable(HDMI_SW_OPT_TABLE list[][4])
             XLOGV("switch_iic_list[%d][%d].rLevel = 0x%02x ",i, j, list[i][j].rLevel);
             XLOGV("switch_iic_list[%d][%d].defaultPort = 0x%02x ",i, j, list[i][j].defaultPort);
             XLOGV("switch_iic_list[%d][%d].prePort = 0x%02x ",i, j, list[i][j].prePort);
+            XLOGV("switch_iic_list[%d][%d].sGpio2 = 0x%02x ",i, j, list[i][j].sGpio2);
+            XLOGV("switch_iic_list[%d][%d].sLevel2 = 0x%02x ",i, j, list[i][j].sLevel2);
         }
     }
     return XBH_SUCCESS;
@@ -3190,6 +3194,65 @@ XBH_S32 XbhModuleInterface::setSocFreeRun(XBH_BOOL enable)
     return  s32Ret;
 }
 
+/*********************************************************************************************USB HUB************************************************************************************************/
+/**
+ * 获取USB HUB的器件类型
+*/
+static XBH_U8 usb_hub_table[] = {
+    XBH_USB_HUB_TABLE
+};
+
+static COMMON_OPT_TABLE usb_hub_opt_table[] = {
+    XBH_USB_HUB_OPT_TABLE
+};
+/**
+ * 获取USB HUB的器件的操作参数
+ * retval 0:success,-1:failure
+*/
+XBH_S32 XbhModuleInterface::getUsbHubTable(XBH_U8 list[])
+{
+    for (int i = 0; i < sizeof(usb_hub_table) / sizeof(usb_hub_table[0]); i ++)
+    {
+        list[i] = usb_hub_table[i];
+    }
+
+    for (int i = 0; i < sizeof(usb_hub_table) / sizeof(usb_hub_table[0]); i ++)
+    {
+        XLOGV("usb_hub_table[%d] = 0x%02x ",i, list[i]);
+    }
+    return XBH_SUCCESS;
+}
+/**
+ * 获取USB HUB的器件的操作参数
+ * retval 0:success,-1:failure
+*/
+XBH_S32 XbhModuleInterface::getUsbHubOptTable(COMMON_OPT_TABLE list[])
+{
+    for (int i = 0; i < sizeof(usb_hub_opt_table) / sizeof(usb_hub_opt_table[0]); i++)
+    {
+        list[i].iicBus1 = usb_hub_opt_table[i].iicBus1;
+        list[i].iicBus2 = usb_hub_opt_table[i].iicBus2;
+        list[i].iicAddr = usb_hub_opt_table[i].iicAddr;
+        list[i].uart = usb_hub_opt_table[i].uart;
+        list[i].pGpio = usb_hub_opt_table[i].pGpio;
+        list[i].pLevel = usb_hub_opt_table[i].pLevel;
+        list[i].rGpio = usb_hub_opt_table[i].rGpio;
+        list[i].rLevel = usb_hub_opt_table[i].rLevel;
+    }
+
+    for (int i = 0; i < sizeof(usb_hub_opt_table) / sizeof(usb_hub_opt_table[0]); i++)
+    {
+        XLOGV("usb_hub_opt_table[%d].iicBus = 0x%02x ",i, list[i].iicBus1);
+        XLOGV("usb_hub_opt_table[%d].iicBus = 0x%02x ",i, list[i].iicBus2);
+        XLOGV("usb_hub_opt_table[%d].iicAddr = 0x%02x ",i, list[i].iicAddr);
+        XLOGV("usb_hub_opt_table[%d].uart = 0x%02x ",i, list[i].uart);
+        XLOGV("usb_hub_opt_table[%d].pGpio = 0x%02x ",i, list[i].pGpio);
+        XLOGV("usb_hub_opt_table[%d].pLevel = 0x%02x ",i, list[i].pLevel);
+        XLOGV("usb_hub_opt_table[%d].rGpio = 0x%02x ",i, list[i].rGpio);
+        XLOGV("usb_hub_opt_table[%d].rLevel = 0x%02x ",i, list[i].rLevel);
+    }
+    return XBH_SUCCESS;
+}
 #if 1
 // C风格接口函数
 extern "C" XBH_S32 XbhC_setI2cData(XBH_U32 u32I2cNum, XBH_U8 u8DevAddress, XBH_U32 u32RegAddr, XBH_U32 u32RegAddrCount, XBH_U32 u32Length, const XBH_U8* u8Data);

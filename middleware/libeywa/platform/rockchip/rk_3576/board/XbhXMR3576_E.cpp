@@ -25,6 +25,7 @@ XBH_BOOL                 XbhXMR3576_E::mOTGMode = XBH_FALSE;
 
 #define XBH_USBC_NET            1   //跟随到板载type-c
 #define XBH_FUSBC_NET           2   //跟随到前置type-c
+#define XBH_EEPROM_ADDR         0xA0   //eeprom的设备地址
 
 const  XBH_U32           XbhXMR3576_E::M_PS_ON_BASE_DELAY_TIME(700);
 const  XBH_U32           XbhXMR3576_E::M_PS_ON_DELAY_TIME_STEP(200);
@@ -1570,7 +1571,7 @@ XBH_S32 XbhXMR3576_E::setVgaEdidI2cData(XBH_U32 u32RegAddr, const XBH_U8* u8Data
 {
     XBH_S32 s32Ret = XBH_FAILURE;
 
-    I2CSimulator* pSimulator = I2CSimulator::getInstance(XBH_BOARD_GPIO_VGA_EEPROM_SDA, XBH_BOARD_GPIO_VGA_EEPROM_SCL);
+    I2CSimulator* pSimulator = I2CSimulator::getInstance(XBH_BOARD_GPIO_VGA_EEPROM_SDA, XBH_BOARD_GPIO_VGA_EEPROM_SCL, XBH_EEPROM_ADDR);
     if (pSimulator == nullptr)
     {
         XLOGD("Failed to create I2CSimulator instance\n");
@@ -1586,7 +1587,7 @@ XBH_S32 XbhXMR3576_E::getVgaEdidI2cData(XBH_U32 u32RegAddr, XBH_U8* u8Data, XBH_
 {
     XBH_S32 s32Ret = XBH_FAILURE;
 
-    I2CSimulator* pSimulator = I2CSimulator::getInstance(XBH_BOARD_GPIO_VGA_EEPROM_SDA, XBH_BOARD_GPIO_VGA_EEPROM_SCL);
+    I2CSimulator* pSimulator = I2CSimulator::getInstance(XBH_BOARD_GPIO_VGA_EEPROM_SDA, XBH_BOARD_GPIO_VGA_EEPROM_SCL, XBH_EEPROM_ADDR);
     if (pSimulator == nullptr)
     {
         XLOGD("Failed to create I2CSimulator instance\n");
@@ -2041,7 +2042,6 @@ XBH_S32 XbhXMR3576_E::processHpdUsbSwitch(XBH_SOURCE_E src)
 {
     switch (src) {
         case XBH_SOURCE_F_HDMI1:
-            setTypecReset(src);
             //Power down front tx reset
             XbhService::getPlatformInterface() ->setGpioOutputValue(XBH_BOARD_GPIO_F_HUB_RST, !XBH_BOARD_GPIO_F_HUB_RST_LEVEL);
             XbhService::getPlatformInterface() ->setGpioOutputValue(XBH_BOARD_GPIO_F_GPIO2, !XBH_BOARD_GPIO_F_GPIO2_LEVEL);
@@ -2071,7 +2071,6 @@ XBH_S32 XbhXMR3576_E::processHpdUsbSwitch(XBH_SOURCE_E src)
             XbhService::getPlatformInterface() ->setGpioOutputValue(XBH_BOARD_GPIO_F_USB_PWR, XBH_BOARD_GPIO_F_USB_PWR_LEVEL);
             break;
         case XBH_SOURCE_USBC1:
-            setTypecReset(src);
             //Power down front tx reset
             XbhService::getPlatformInterface() ->setGpioOutputValue(XBH_BOARD_GPIO_F_GPIO2, !XBH_BOARD_GPIO_F_GPIO2_LEVEL);
             XbhService::getPlatformInterface() ->setGpioOutputValue(XBH_BOARD_GPIO_F_USB_PWR, !XBH_BOARD_GPIO_F_USB_PWR_LEVEL);
@@ -2104,7 +2103,6 @@ XBH_S32 XbhXMR3576_E::processHpdUsbSwitch(XBH_SOURCE_E src)
             XbhService::getPlatformInterface() ->setGpioOutputValue(XBH_BOARD_GPIO_F_USB_PWR, XBH_BOARD_GPIO_F_USB_PWR_LEVEL);
             break;
         case XBH_SOURCE_F_USBC1:
-            setTypecReset(src);
             //Power down front tx reset
             XbhService::getPlatformInterface() ->setGpioOutputValue(XBH_BOARD_GPIO_F_HUB_RST, !XBH_BOARD_GPIO_F_HUB_RST_LEVEL);
             XbhService::getPlatformInterface() ->setGpioOutputValue(XBH_BOARD_GPIO_F_GPIO2, !XBH_BOARD_GPIO_F_GPIO2_LEVEL);
@@ -2142,7 +2140,6 @@ XBH_S32 XbhXMR3576_E::processHpdUsbSwitch(XBH_SOURCE_E src)
         case XBH_SOURCE_HDMI1:
         case XBH_SOURCE_HDMI2:
         case XBH_SOURCE_DP1:
-            setTypecReset(src);
             //Power down front tx reset
             XbhService::getPlatformInterface() ->setGpioOutputValue(XBH_BOARD_GPIO_F_GPIO2, !XBH_BOARD_GPIO_F_GPIO2_LEVEL);
             XbhService::getPlatformInterface() ->setGpioOutputValue(XBH_BOARD_GPIO_F_USB_PWR, !XBH_BOARD_GPIO_F_USB_PWR_LEVEL);
@@ -2310,4 +2307,14 @@ XBH_S32 XbhXMR3576_E::ProcessTypeCHotplug(XBH_SOURCE_E src)
             return XBH_FAILURE;
     }
     return XBH_SUCCESS;
+}
+
+XBH_S32 XbhXMR3576_E::getKtcTouchInfo(XBH_CHAR* pBuff)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    std::string value;
+    XbhSysOpt::getInstance()->readSysfs("/sys/devices/virtual/skg/skg_touch/drvinfo", value);
+    strcpy(pBuff, value.c_str());
+    XLOGD("getKtcTouchInfo=%s\n", value.c_str());
+    return s32Ret;
 }

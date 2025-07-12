@@ -15,11 +15,14 @@
 #include "XbhAudioCodecManager.h"
 #include "XbhVgaEdidManager.h"
 
-
 class XbhXMA311D2_T2 : public XbhAmlogic_311d2,public XbhMWThread
 {
 public:
     static XbhXMA311D2_T2* getInstance();
+    //override
+    XBH_S32 followToOps1(XBH_VOID);
+    //override
+    XBH_S32 followToAndroid(XBH_VOID);
     //override
     XBH_S32 getHdmi1Det(XBH_BOOL *enable);
     //override
@@ -63,6 +66,8 @@ public:
     //override
     XBH_S32 setMute(XBH_AUDIO_CHANNEL_E enAudioChannel, XBH_BOOL bEnable);
     //override
+    XBH_S32 getMute(XBH_AUDIO_CHANNEL_E enAudioChannel, XBH_BOOL* bEnable);
+    //override
     XBH_S32 getMicDetectStatus(XBH_BOOL* status);
     //override
     XBH_S32 getHpDetectStatus(XBH_BOOL* status);
@@ -78,6 +83,10 @@ public:
     XBH_S32 setUsbLockMode(XBH_U32 u32UsbType);
     //override
     XBH_S32 getUsbLockMode(XBH_U32 *u32UsbType);
+    //override
+    XBH_S32 setLineOutMode(XBH_LINEOUT_MODE_E enLineOutMode);
+    //override
+    XBH_S32 getLineOutMode(XBH_LINEOUT_MODE_E* enLineOutMode);
     //override
     XBH_S32 setVgaEdid(const XBH_CHAR* strPath, XBH_SOURCE_E idx);
     //override
@@ -140,6 +149,22 @@ public:
     XBH_S32 getPowerSensorExist(XBH_BOOL* bEnable);
     //override
     XBH_S32 getPowerSensorValue(XBH_FLOAT* s32Value);
+    //override
+    XBH_S32 setErrorDetectState(XBH_BOOL bEnable, XBH_U32 enDetectType);
+    //override
+    XBH_S32 getErrorDetectState(XBH_BOOL* bEnable, XBH_U32* enDetectType);
+    //override
+    XBH_S32 getErrorCode(XBH_U32* u32ErrorCode);
+    //override
+    XBH_S32 clearErrorCode(void);
+    //override
+    XBH_S32 initHdmiCecPhysicalAddr();
+    //override
+    XBH_S32 getWakeUpReason(XBH_WAKEUP_S *stWake);
+    /*
+    获取MCU唤醒信息
+    */
+    XBH_S32 getMcuWakeUpInfo(XBH_WAKEUP_S *stWake);
 
 private:
     void run(const void* arg);
@@ -152,11 +177,14 @@ private:
     XBH_S32  m_bUsbPortStatus;
     XBH_S32 getVSPort2LinkState(void);
     XBH_S32 getVSPort1LinkState(void);
+    XBH_BOOL Switch_UsbC_in_Mode(XBH_VOID);
     XBH_BOOL isFrontTypecInDetChanged();
     XBH_BOOL isRearTypecInDetChanged();
     void regValToPowerLevel(XBH_U8 regVal, XBH_CHAR * powerLevle);
     XBH_BOOL isPDchargeConfiguedOK(XBH_U32 bus_index, XBH_U8 device_addr, XBH_U16 register_addr,XBH_U8 * data);
     XBH_BOOL handlePDcharge();
+    XBH_S32 setMacAddrToMCU(void);
+    XBH_S32 setNetAddrToMCU(void);
 
 private:
     static XbhXMA311D2_T2 *mInstance;

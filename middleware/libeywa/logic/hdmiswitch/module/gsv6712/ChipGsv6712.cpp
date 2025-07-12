@@ -29,10 +29,13 @@ ChipGsv6712::ChipGsv6712(XBH_S32 i2cNumber, XBH_S32 i2cAddress, XBH_S32 powerGpi
 
     if(mPowerGpio != -1)
     {
+        XbhService::getModuleInterface()->setGpioOutputValue(mPowerGpio, !mPowerLevel);
+        usleep(100*1000);
         XbhService::getModuleInterface()->setGpioOutputValue(mPowerGpio, mPowerLevel);
         usleep(100*1000);
     }
-
+    //上电之后复位之前加入启动保护程序
+    powerUpProtection();
     if(0x01 == m_u8SwitchPort.port0 || 0x01 == m_u8SwitchPort.port1 || 0x01 == m_u8SwitchPort.port2 || 0x01 == m_u8SwitchPort.port3)
     {
         mHasNextPort = XBH_TRUE;
@@ -49,6 +52,18 @@ ChipGsv6712::ChipGsv6712(XBH_S32 i2cNumber, XBH_S32 i2cAddress, XBH_S32 powerGpi
         XbhService::getModuleInterface()->setGpioOutputValue(mResetGpio, !mResetLevel);
         usleep(50 * 1000);
         XbhService::getModuleInterface()->setGpioOutputValue(mResetGpio, mResetLevel);
+        usleep(100 * 1000);
+    }
+    else
+    {
+        //当不支持硬件复位时，使用软件复位
+        //当存在后一级switch的时候需要等待后一级switch初始化完成
+        if(mHasNextPort)
+        {
+            usleep(2 * level * 1000 * 1000);
+        }
+        XBH_U8 resetData = CMD_RESET; //软复位
+        XbhService::getModuleInterface()->setI2cData(mI2cNumber, mI2cAddress, REG_HPD_ASSERT_CTRL, 2, 1, &resetData);
         usleep(100 * 1000);
     }
 
@@ -593,4 +608,55 @@ end:
         free (partition_data);
     }
 }
+/**
+    请将这段代码添加到SoC对GSV芯片控制上电时硬复位操作之前.
+    其作用在于在恶劣的供电和PCB环境下,保证GSV芯片的正常启动,保证芯片量产良率.
+*/
+XBH_S32 ChipGsv6712::powerUpProtection()
+{
+    XBH_S32 ret = XBH_SUCCESS;
+    XBH_U8 loop = 0;
+    XBH_U8 temp = 0;
+    XBH_U8 GsvTable[] =
+    {
+        0x00, 0x00, 0x00,
+        0x00, 0x9C, 0x08,
+        0x00, 0xB4, 0x0F,
+        0x00, 0xB5, 0x0F,
+        0x00, 0xB6, 0x0F,
+        0x00, 0xB8, 0x0F,
+        0x00, 0xB7, 0x0F,
+        0x05, 0x34, 0x9E,
+        0x05, 0x64, 0x9E,
+        0x05, 0x94, 0x9E,
+        0x05, 0xB4, 0x9E,
+        0x05, 0xE4, 0x9E,
+        0x05, 0x54, 0x9E,
+        0x08, 0x53, 0x02,
+        0x00, 0xA2, 0xFF,
+        0x00, 0xA6, 0xFF,
+        0x00, 0x01, 0x89,
+        0x00, 0x02, 0x00,
+        0x05, 0x31, 0x7E,
+        0x05, 0x51, 0x7E,
+        0x05, 0x61, 0x7E,
+        0x05, 0x91, 0x7E,
+        0x05, 0xB1, 0x7E,
+        0x05, 0xE1, 0x7E,
+        0xFE, 0xFE, 0xFE
+    };
+    /* Write GSV_DEVICE_ADDR.0x00FF = 0xFF */
+    temp = 0xFF;
+    //ManI2cWrite(GSV_DEVICE_ADDR, 0x00FF, &temp, 1, 0, 1);
+    ret = XbhService::getModuleInterface()->setI2cData(mI2cNumber, mI2cAddress, 0X00FF, 2, 1, &temp);
+    /* Read back GSV_DEVICE_ADDR.0xFFFF */
+    //ManI2cRead (GSV_DEVICE_ADDR, 0xFFFF, &temp, 1, 0, 1);
+    ret = XbhService::getModuleInterface()->getI2cData(mI2cNumber, mI2cAddress, 0XFFFF, 2, 1, &temp);
+    for(loop=0; GsvTable[loop]!=0xFE; loop=loop+3)
+    {
+        //ManI2cWrite(GSV_DEVICE_ADDR, ((GsvTable[loop]<<8)+GsvTable[loop+1]), &GsvTable[loop+2], 1, 0, 1);
+        ret = XbhService::getModuleInterface()->setI2cData(mI2cNumber, mI2cAddress, ((GsvTable[loop]<<8)+GsvTable[loop+1]), 2, 1, &GsvTable[loop+2]);
+    }
 
+    return ret;
+}

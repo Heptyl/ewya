@@ -15,8 +15,21 @@ enum XBH_LOG_PRIO_E
     XBH_LOG_ERROR,
     XBH_LOG_FATAL,
     XBH_LOG_BUTT,
+    XBH_LOG_ASSERT,
 } ;
 
+// 日志级别字符串映射,日志格式为DEBUG:0,INFO:1,WARN:2，ERROR:3....对应LOG_PRIO_STR[XBH_LOG_PRIO_E]
+static const char* LOG_PRIO_STR[] = {
+    "-1",//ALL
+    "-1",//VERBOSE
+    "0",//DEBUG
+    "1",//INFO
+    "2",//WARN
+    "3",//ERROR
+    "-1",//FATAL
+    "-1",//BUTT
+    "4",//ASSERT
+};
 
 /*
  * Simplified macro to send a verbose log message using the current LOG_TAG.
@@ -84,6 +97,16 @@ enum XBH_LOG_PRIO_E
 #endif
 #endif
 
+/*
+ * Simplified macro to send an error log message using the current LOG_TAG.
+ */
+#ifndef XLOGA
+#if LOG_NDEBUG
+#define XLOGA(...)   ((void)0)
+#else
+#define XLOGA(...) ((void)XLOA(XBH_LOG_ASSERT, XBH_LOG_TAG, __VA_ARGS__))
+#endif
+#endif
 
 #ifndef XLOG
 #define XLOG(priority, tag, ...) \

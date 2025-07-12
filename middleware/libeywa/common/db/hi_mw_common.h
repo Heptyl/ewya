@@ -27,9 +27,9 @@ using namespace std;
 
 
 /* 资源文件相对路径定义 */
-static const HI_CHAR* INI_CFG_INI_PATH  = "usr/ini/cfg.ini";
-static const HI_CHAR* INI_DB_INI_PATH  = "usr/ini/db.ini";
-static const HI_CHAR* INI_AQ_INI_PATH  = "usr/ini/aq.ini";
+static const HI_CHAR* INI_CFG_INI_PATH  = "/odm/atv/ini/cfg.ini";
+static const HI_CHAR* INI_DB_INI_PATH  = "/odm/atv/ini/db.ini";
+static const HI_CHAR* INI_AQ_INI_PATH  = "/odm/atv/ini/aq.ini";
 
 #define HI_CHANNEL_ERR_BASE           (0xfffffa00)
 #define HI_CHANNEL_ERR_CREATE_FAIL    (HI_CHANNEL_ERR_BASE + 1) /* channel Create fail */

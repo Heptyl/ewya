@@ -5,6 +5,7 @@
 #include "XbhService.h"
 #include "ChipAp8232.h"
 #include <hardware/board.h>
+#include <cutils/properties.h>
 
 #define UPGRADE_PACK_SIZE 512
 
@@ -706,16 +707,16 @@ XBH_S32 ChipAp8232::getFirmwareVersion(XBH_CHAR* strVersion)
 {
     XBH_S32 len=0;
 
-    if(!m_bInitDone)
-    {
-        XLOGE(" chip is not init !!!!!");
-        return XBH_FAILURE;
-    }
+    //if(!m_bInitDone)
+    //{
+    //    XLOGE(" chip is not init !!!!!");
+    //    return XBH_FAILURE;
+    //}
     if(strVersion == XBH_NULL) {
         XLOGD("===> getFirmwareVersion strVersion is NULL");
         return XBH_FAILURE;
     }
-    if (mState == XBH_UPGRADE_RUNNING)
+    if (mState == XBH_UPGRADE_RUNNING && !mUpdateEnd)
     {
         XLOGW("Warning: Ap8232 is updating...");
         return XBH_FAILURE;
@@ -736,6 +737,7 @@ XBH_S32 ChipAp8232::getFirmwareVersion(XBH_CHAR* strVersion)
 
     sprintf(strVersion, "%x.%x.%x", m_u8RxBuff[5], m_u8RxBuff[6], m_u8RxBuff[7]);
     XLOGI("%s VER=T%s***************", __func__, strVersion);
+    property_set("persist.vendor.xbh.ap8232.ver", strVersion);
 
     return XBH_SUCCESS;
 }
@@ -764,6 +766,8 @@ XBH_S32 ChipAp8232::upgradeFirmware(const XBH_CHAR* strFilePath, XBH_BOOL bForce
     }
 
     mState = XBH_UPGRADE_RUNNING;
+    property_set("persist.vendor.xbh.ap8232.ver", "");
+
     //set force upgrade flag
     mForceUpgrade = bForceUpgrade;
 
@@ -908,6 +912,11 @@ XBH_S32 ChipAp8232::init()
     XBH_S32 s32Ret = XBH_FAILURE;
     m_bInitDone = XBH_FALSE;
     XBH_U8 unmuteMode = 0x00;
+    XBH_CHAR codec_FWVer[10] = {0};
+    XBH_U8 resetRegData[20] = {0};
+    XBH_U8 len = 0;
+
+    getFirmwareVersion(codec_FWVer);
     //TODO
     XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_SPEAKER, XBH_TRUE);
     if(mHp_mute_gpio >= 0)
@@ -917,7 +926,25 @@ XBH_S32 ChipAp8232::init()
     }
     if(mPgpio >= 0)
     {
-        XLOGD("Ap8232 power enable");
+        XLOGD("Ap8232 power enable,codec_FWVer=%s\n",codec_FWVer);
+        //针对codec3.3.3版本在这里专门做一个软件的复位功能，规避iiyama项目的概率性codec时钟异常导致无音
+        if(strcmp(codec_FWVer, "3.3.3") == 0)
+        {
+            resetRegData[len++] = 0xA5;
+            resetRegData[len++] = 0x5A;
+            resetRegData[len++] = 0x94;  /*reset*/
+            resetRegData[len++] = 0x03;
+            resetRegData[len++] = 0x00;
+            resetRegData[len++] = 0x01;
+            resetRegData[len++] = 0x00;
+            s32Ret = Ap8232_Write(resetRegData, len);
+            if(s32Ret == XBH_FAILURE)
+            {
+                XLOGE("reset chipAp8232:Ap8232_Write failure %d,codec_FWVer=%s\n",s32Ret,codec_FWVer);
+            }
+            XLOGD("%s %d :reset chipAp8232,codec_FWVER=%s,len = %d\n",__func__,__LINE__,codec_FWVer,len);
+            usleep(2000 * 1000);
+        }
         XbhService::getModuleInterface()->setGpioOutputValue(mPgpio, mPLevel);
         usleep(3000 * 1000);
     }
@@ -981,6 +1008,7 @@ XBH_S32 ChipAp8232::startUpgradeFireware(XBH_VOID)
     XBH_U32 u32PresetFileLen = 0;
     XBH_CHAR FWVer[10] = {0};
     XBH_CHAR EffVer[10] = {0};
+    XBH_CHAR* m_FWVer = (char *)malloc(10);
 
     mState = XBH_UPGRADE_RUNNING;
 
@@ -1016,6 +1044,12 @@ XBH_S32 ChipAp8232::startUpgradeFireware(XBH_VOID)
         XLOGE("Wait AP8224 Reboot failed !!!");
         return XBH_FAILURE;
     }
+
+    mUpdateEnd = XBH_TRUE;
+    getFirmwareVersion(m_FWVer);
+    mUpdateEnd = XBH_FALSE;
+
+    free(m_FWVer);
     mState = XBH_UPGRADE_SUCCESS;
     return XBH_SUCCESS;
 }
@@ -1262,6 +1296,176 @@ XBH_S32 ChipAp8232::getMicHowling(XBH_BOOL* enable)
 }
 
 /**
+ * 设置line out在线切换模式
+ */
+XBH_S32 ChipAp8232::setLineOutMode(XBH_LINEOUT_MODE_E enLineOutMode)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+#if XHB_EARPHONE_LEFT_VOLUME_1
+    XBH_U8 lineOutBuff[34] = {0};
+    XBH_U8 len = 0;
+    switch(enLineOutMode)
+    {
+        case XBH_LINEOUT_MODE_EARPHONE:         //耳机模式
+        {   
+            memset(lineOutBuff,0,sizeof(lineOutBuff));
+            lineOutBuff[len++] = 0xA5;
+            lineOutBuff[len++] = 0x5A;
+            lineOutBuff[len++] = 0x09;/*DAC0*/
+            lineOutBuff[len++] = 0x1D;/*length*/
+            lineOutBuff[len++] = 0xFF;/*index = 0:  all parameter*/
+            lineOutBuff[len++] = 0x03;/*mute L*/
+            lineOutBuff[len++] = 0x00;/*mute H*/
+            lineOutBuff[len++] = 0x08;
+            lineOutBuff[len++] = 0x00;/*sample_rate*/
+            lineOutBuff[len++] = 0x00;
+            lineOutBuff[len++] = 0x00;/*mute*/
+            lineOutBuff[len++] = XHB_EARPHONE_LEFT_VOLUME_1;
+            lineOutBuff[len++] = XHB_EARPHONE_LEFT_VOLUME_2;/*left_volume*/
+            lineOutBuff[len++] = XHB_EARPHONE_RIGHT_VOLUME_1;
+            lineOutBuff[len++] = XHB_EARPHONE_RIGHT_VOLUME_2;/*right_volume*/
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0x16;
+            s32Ret = Ap8232_Write(lineOutBuff, len);
+            XLOGD("AP8232_setLineOutMode hp mode,len=%d!!!\n",len);
+            break;
+        }
+        case XBH_LINEOUT_MODE_LINEOUT:   //lineout模式
+        {   
+            memset(lineOutBuff,0,sizeof(lineOutBuff));
+            lineOutBuff[len++] = 0xA5;
+            lineOutBuff[len++] = 0x5A;
+            lineOutBuff[len++] = 0x09;/*DAC0*/
+            lineOutBuff[len++] = 0x1D;/*length*/
+            lineOutBuff[len++] = 0xFF;/*index = 0:  all parameter*/
+            lineOutBuff[len++] = 0x03;/*mute L*/
+            lineOutBuff[len++] = 0x00;/*mute H*/
+            lineOutBuff[len++] = 0x08;
+            lineOutBuff[len++] = 0x00;/*sample_rate*/
+            lineOutBuff[len++] = 0x00;
+            lineOutBuff[len++] = 0x00;/*mute*/
+            lineOutBuff[len++] = XHB_LINE_OUT_LEFT_VOLUME_1;
+            lineOutBuff[len++] = XHB_LINE_OUT_LEFT_VOLUME_2;/*left_volume*/
+            lineOutBuff[len++] = XHB_LINE_OUT_RIGHT_VOLUME_1;
+            lineOutBuff[len++] = XHB_LINE_OUT_RIGHT_VOLUME_2;/*right_volume*/
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0x16;
+            s32Ret = Ap8232_Write(lineOutBuff, len);
+            XLOGD("AP8232_setLineOutMode line out mode,len=%d!!!\n",len);
+            break;
+        }
+        default:   //默认lineout模式
+        {   
+            memset(lineOutBuff,0,sizeof(lineOutBuff));
+            lineOutBuff[len++] = 0xA5;
+            lineOutBuff[len++] = 0x5A;
+            lineOutBuff[len++] = 0x09;/*DAC0*/
+            lineOutBuff[len++] = 0x1D;/*length*/
+            lineOutBuff[len++] = 0xFF;/*index = 0:  all parameter*/
+            lineOutBuff[len++] = 0x03;/*mute L*/
+            lineOutBuff[len++] = 0x00;/*mute H*/
+            lineOutBuff[len++] = 0x08;
+            lineOutBuff[len++] = 0x00;/*sample_rate*/
+            lineOutBuff[len++] = 0x00;
+            lineOutBuff[len++] = 0x00;/*mute*/
+            lineOutBuff[len++] = XHB_LINE_OUT_LEFT_VOLUME_1;
+            lineOutBuff[len++] = XHB_LINE_OUT_LEFT_VOLUME_2;/*left_volume*/
+            lineOutBuff[len++] = XHB_LINE_OUT_RIGHT_VOLUME_1;
+            lineOutBuff[len++] = XHB_LINE_OUT_RIGHT_VOLUME_2;/*right_volume*/
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0;
+            lineOutBuff[len++] = 0x16;
+            s32Ret = Ap8232_Write(lineOutBuff, len);
+            XLOGD("AP8232_setLineOutMode default line out mode len=%d!!!\n",len);
+            break;
+        }
+    }
+    XLOGD("setLineOutMode=%d,left_volume1 = %#x,left_volume2 = %#x,right_volume1 = %#x,right_volume2 = %#x\n",enLineOutMode,lineOutBuff[11],lineOutBuff[12],lineOutBuff[13],lineOutBuff[14]);
+#endif
+    return  s32Ret;
+}
+
+/**
+ * 获取line out当前模式
+ */
+XBH_S32 ChipAp8232::getLineOutMode(XBH_LINEOUT_MODE_E* enLineOutMode)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+#if XHB_EARPHONE_LEFT_VOLUME_1
+    XBH_U8 reg_data[34] = {0};
+    s32Ret = Ap8232_Read(reg_data, 0x09, 34);
+
+    if(reg_data[11] == XHB_EARPHONE_LEFT_VOLUME_1 && reg_data[12] == XHB_EARPHONE_LEFT_VOLUME_2)
+    {   
+        XLOGD("AP8232_getLineOutMode hp mode!!!\n");
+        *enLineOutMode = XBH_LINEOUT_MODE_EARPHONE;
+    }
+    else if(reg_data[11] == XHB_LINE_OUT_LEFT_VOLUME_1 && reg_data[12] == XHB_LINE_OUT_LEFT_VOLUME_2)
+    {   
+        XLOGD("AP8232_getLineOutMode line out mode!!!\n");
+        *enLineOutMode = XBH_LINEOUT_MODE_LINEOUT;
+    }
+    else
+    {   
+        XLOGD("AP8232_getLineOutMode default line out mode!!!\n");
+        *enLineOutMode = XBH_LINEOUT_MODE_LINEOUT;
+    }
+    XLOGD("left_volume1 = %#x,left_volume2 = %#x,right_volume1 = %#x,right_volume2 = %#x,mode = %d\n",reg_data[11],reg_data[12],reg_data[13],reg_data[14],*enLineOutMode);
+#endif  
+   return  s32Ret;
+}
+
+/**
  * 获取chip是否初始化完成
 */
 XBH_S32 ChipAp8232::getChipInitDone(XBH_BOOL* enable)
@@ -1313,6 +1517,7 @@ ChipAp8232::ChipAp8232(XBH_S32 iicBus, XBH_S32 iicAddr, XBH_S32 uart, XBH_S32 pG
     mHp_mute_level = hp_mute_level;
     mState = XBH_UPGRADE_IDLE;
     m_bChipExsit = init() == XBH_SUCCESS;
+    mUpdateEnd = XBH_FALSE;
     XLOGD(" end ");
 }
 

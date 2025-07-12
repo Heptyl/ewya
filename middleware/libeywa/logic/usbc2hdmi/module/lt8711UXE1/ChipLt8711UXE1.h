@@ -67,7 +67,11 @@ public:
      * 进行固件升级
      */
     XBH_S32 upgradeFirmware(const XBH_CHAR* strFilePath, XBH_BOOL bForceUpgrade);
-
+    
+    /**
+     * dataflow进行固件升级
+     */    
+    XBH_S32 upgradeFirmwareByData(XBH_U8 *data, XBH_U32 dataLen, XBH_BOOL bForceUpgrade);
     /**
      * 获取当前升级的进度
      */
@@ -135,7 +139,6 @@ private:
     XBH_S32 mPLevel;
     XBH_S32 mRGpio;
     XBH_S32 mRLevel;
-
 //---------------- custom device interface end ----------------
 private:
     void run(const void* arg);

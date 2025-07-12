@@ -38,6 +38,15 @@ public:
     virtual XBH_S32 setTouchScaleRect(XBH_S32 resolution, XBH_S32 x, XBH_S32 y, XBH_S32 w, XBH_S32 h);
 
     /**
+    * 设置触摸缩放区域
+    * x,y,w,h 当前区域的矩形参数
+    * resolution: 分辨率, 0：1920x1080 1:3840x2160 2 5210x2160
+    * 该接口可用来实现触摸缩放或者设置信源小窗时的触摸
+    * 需要使用屏幕下移时须调用setTouchScaleRect
+    */
+    virtual XBH_S32 setTouchScalingRegion(XBH_S32 resolution, XBH_S32 x, XBH_S32 y, XBH_S32 w, XBH_S32 h);
+
+    /**
      * 发送按键给触摸框，由触摸框转发
      */
     virtual XBH_S32 sendKeyToTp(XBH_U32 keyCode);

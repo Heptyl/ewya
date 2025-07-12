@@ -114,7 +114,8 @@ LOCAL_SHARED_LIBRARIES := \
     libms9282 \
     rockchip.hardware.outputmanager@1.0 \
     libhdcp \
-    libvendor_storage
+    libvendor_storage \
+    libusb
 
 #ALL_DEFAULT_INSTALLED_MODULES += $(LOCAL_MODULE)
 include $(BUILD_SHARED_LIBRARY)

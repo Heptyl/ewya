@@ -28,6 +28,10 @@ public:
     //override
     XBH_S32 getFHdmi1Det(XBH_BOOL *enable);
     //override
+    XBH_S32 getFHdmi2Det(XBH_BOOL *enable);
+    //override
+    XBH_S32 getFHdmi3Det(XBH_BOOL *enable);
+    //override
     XBH_S32 getVga1Det(XBH_BOOL *enable);
     //override
     XBH_S32 getFUsbc1Det(XBH_BOOL *enable);
@@ -95,6 +99,10 @@ public:
     //override
     XBH_S32 followToFHdmi1(XBH_VOID);
     //override
+    XBH_S32 followToFHdmi2(XBH_VOID);
+    //override
+    XBH_S32 followToFHdmi3(XBH_VOID);
+    //override
     XBH_S32 setOnResume(XBH_S32 state);
     //override
     XBH_S32 setVgaEdid(const XBH_CHAR* strPath, XBH_SOURCE_E idx);
@@ -110,6 +118,8 @@ public:
     XBH_S32 getHdmiTxInfo(XBH_HDMI_TX_INFO_E enInfo, XBH_CHAR* info);
     //override
     XBH_S32 getAmpInitStatus(XBH_BOOL* value);
+    //override
+    XBH_S32 setSourcePdAbility(XBH_PDCAPACITY_POWER pdability, XBH_SOURCE_E enSource);
 private:
     XbhXMM9679_U();
     ~XbhXMM9679_U();

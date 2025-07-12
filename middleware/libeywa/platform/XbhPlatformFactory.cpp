@@ -62,6 +62,10 @@ XBH_VOID* XbhPlatformFactory::CreatePlatform(PLATFORM_TYPE type)
     case PLATFORM_TYPE::ROCKCHIP_3576:
         if(pXbhRk_3576 == XBH_NULL)
         {
+            #if (TYPE_BOARD == XMR3576A)
+            pXbhRk_3576 = XbhXMR3576_A::getInstance();
+            #endif
+
             #if (TYPE_BOARD == XMR3576B)
             pXbhRk_3576 = XbhXMR3576_B::getInstance();
             #endif
@@ -106,6 +110,8 @@ XBH_VOID* XbhPlatformFactory::CreatePlatform(PLATFORM_TYPE type)
         {
             #if (TYPE_BOARD == XMH610A)
             pXbhHi_610 = XbhXMH610_A::getInstance();
+            #elif (TYPE_BOARD == XMH610B)
+            pXbhHi_610 = XbhXMH610_B::getInstance();
             #endif
         }
         return (XBH_VOID*)pXbhHi_610;

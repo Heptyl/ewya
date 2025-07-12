@@ -55,6 +55,8 @@ public:
     //override
     XBH_S32 setMute(XBH_AUDIO_CHANNEL_E enAudioChannel, XBH_BOOL bEnable);
     //override
+    XBH_S32 getMute(XBH_AUDIO_CHANNEL_E enAudioChannel, XBH_BOOL* bEnable);
+    //override
     XBH_S32 getMicDetectStatus(XBH_BOOL* status);
     //override
     XBH_S32 getHpDetectStatus(XBH_BOOL* status);
@@ -64,6 +66,8 @@ public:
     XBH_S32 getExtendIcVer(XBH_S32 devType, XBH_CHAR* ver);
     //override
     XBH_S32 upgradeExtendIc(const XBH_CHAR* filename, XBH_BOOL force, XBH_U32 devType);
+    //override
+    XBH_S32 upgradeExtendIcByData(XBH_U8 *data, XBH_U32 dataLen, XBH_BOOL force, XBH_U32 devType);
     //override
     XBH_S32 getUpgradeExtIcState(XBH_S32 devType, XBH_S32* s32Value);
     //override
@@ -90,7 +94,14 @@ public:
     XBH_S32 setWoTStatus(XBH_WAKEUP_E enWakeUpType, XBH_BOOL bEnable);
     //override
     XBH_S32 getWoTStatus(XBH_WAKEUP_E enWakeUpType, XBH_BOOL* bEnable);
-
+    //override
+    XBH_S32 setHdmirxEdidType(XBH_HDMIRX_EDID_TYPE_E enType, int bd_idx);
+    //override
+    XBH_S32 getHdmirxEdidType(int bd_idx, XBH_HDMIRX_EDID_TYPE_E *enType);
+    //override
+    XBH_S32 readAndUpdateEdidBinFile(int projectid);
+    //override
+    XBH_S32 initProjectIdConfig();
 private:
     XbhXMA311D2_Y();
     ~XbhXMA311D2_Y();

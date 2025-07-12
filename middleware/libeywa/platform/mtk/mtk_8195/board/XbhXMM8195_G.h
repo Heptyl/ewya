@@ -106,8 +106,6 @@ public:
     //override
     XBH_S32 setOnStop();
     //override
-    XBH_S32 setARCEnable(XBH_BOOL bEnable);
-    //override
     XBH_S32 setCecEnable(XBH_BOOL enable);
     //override
     XBH_S32 getCecEnable(XBH_BOOL* enable);
@@ -123,6 +121,10 @@ public:
     XBH_S32 setFlashEepData(string pBuff);
     //override
     XBH_S32 getFlashEepData(string &pBuff);
+    //override
+    XBH_S32 setAudioEq(XBH_EQ_MODE_E enEqMode, XBH_S32 s32Value);
+    //override
+    XBH_S32 getAudioEq(XBH_EQ_MODE_E enEqMode, XBH_S32* s32Value);
     //override
     XBH_S32 setBass(XBH_S32 s32Value);
     //override
@@ -165,6 +167,14 @@ public:
     XBH_S32 setTypeCPdAbility(XBH_PDCAPACITY_POWER pdability, XBH_SOURCE_E enSource);
     //override
     XBH_S32 setSourcePdAbility(XBH_PDCAPACITY_POWER pdability, XBH_SOURCE_E enSource);
+    //override
+    XBH_S32 getEthPortSpeed(XBH_S32 port, XBH_S32* value);
+    //override
+    XBH_S32 setOpsResetEnable(XBH_BOOL bEnable);
+    //override
+    XBH_S32 setSn(const XBH_CHAR* strSn);
+    //override
+    XBH_S32 getSn(XBH_CHAR* strSn);
 private:
     XbhXMM8195_G();
     ~XbhXMM8195_G();
@@ -202,6 +212,7 @@ private:
     static const string  LENDATAPART;
     static const XBH_U32 LENDATALENTPART;
     static const XBH_U32 MAXLENDATAONCEREADLEN;
+    XBH_BOOL mIsSetEnabled;/*setSN执行标志*/
 };
 
 #endif //XBH_XMM8195_G_H

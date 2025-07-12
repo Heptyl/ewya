@@ -101,7 +101,15 @@ public:
      * 获取固件升级时的状态
      */
     XBH_S32 getUpgradeState(XBH_S32 * s32State);
-
+    /**
+     * 设置line out在线切换模式
+     */
+    XBH_S32 setLineOutMode(XBH_LINEOUT_MODE_E enLineOutMode);
+    /**
+     * 获取line out当前模式
+     */
+    XBH_S32 getLineOutMode(XBH_LINEOUT_MODE_E* enLineOutMode);
+    
     ~XbhAudioCodecTask();
 
 private:

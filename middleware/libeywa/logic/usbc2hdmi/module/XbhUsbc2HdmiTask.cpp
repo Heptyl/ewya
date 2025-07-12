@@ -86,6 +86,22 @@ XBH_S32 XbhUsbc2HdmiTask::upgradeFirmware(XBH_SOURCE_E src, const XBH_CHAR* strF
 }
 
 /**
+ * dataflow进行固件升级
+ */
+XBH_S32 XbhUsbc2HdmiTask::upgradeFirmwareByData(XBH_SOURCE_E src, XBH_U8 *data, XBH_U32 dataLen, XBH_BOOL bForceUpgrade)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XbhUsbc2HdmiInterface *tmp = getCurrIC(src);
+    if(tmp != NULL)
+    {
+        XLOGD(" tmp != NULL ");
+        s32Ret = tmp->upgradeFirmwareByData(data, dataLen,bForceUpgrade);
+    }
+    return s32Ret;
+}
+
+
+/**
  * 获取固件升级时的状态
  */
 XBH_S32 XbhUsbc2HdmiTask::getUpgradeState(XBH_SOURCE_E src, XBH_S32 * s32State)

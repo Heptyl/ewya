@@ -43,6 +43,8 @@
 #include "XbhKernelMsgManager.h"
 #include "XbhWatchDogManager.h"
 #include "XbhPowerSensorManager.h"
+#include "XbhPdIcManager.h"
+#include "XbhUsbHubManager.h"
 //#include "hi_mw_dbo_factory.h"
 
 using namespace android;
@@ -144,6 +146,26 @@ static XBH_S32 setSharpEnable(const Parcel &request, Parcel *reply)
     XBH_S32 s32Ret = XBH_FAILURE;
     XBH_U32 u32Value = request.readInt32();
     s32Ret = pXbhPlatformApiImpl->setSharpEnable(u32Value);
+    return s32Ret;
+}
+
+static XBH_S32 getEdidModelName(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    std::string modelName;
+    s32Ret = pXbhPlatformApiImpl->getEdidModelName(modelName);
+    reply->writeString16(String16(modelName.c_str()));
+    return s32Ret;
+}
+
+static XBH_S32 getEdidSn(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_CHAR serial[10];
+    XBH_U32 length = 10;
+    std::string edidSn;
+    s32Ret = pXbhPlatformApiImpl->getEdidSn(edidSn);
+    reply->writeString16(String16(edidSn.c_str()));
     return s32Ret;
 }
 
@@ -410,6 +432,67 @@ static XBH_S32 getColorTempPara(const Parcel &request, Parcel *reply)
     reply->writeInt32(stInfo.u32BlueOffset);
     return s32Ret;
 }
+
+static XBH_S32 setAndroidColorTempPara(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_COLORTEMP_E enColorTemp = (XBH_COLORTEMP_E)request.readInt32();
+    XBH_GAIN_OFFSET_DATA_S stInfo;
+    stInfo.u32RedGain = request.readInt32();
+    stInfo.u32GreenGain = request.readInt32();
+    stInfo.u32BlueGain = request.readInt32();
+    stInfo.u32RedOffset = request.readInt32();
+    stInfo.u32GreenOffset = request.readInt32();
+    stInfo.u32BlueOffset = request.readInt32();
+    s32Ret = pXbhPlatformApiImpl->setAndroidColorTempPara(enColorTemp, &stInfo);
+    return s32Ret;
+}
+
+static XBH_S32 getAndroidColorTempPara(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_COLORTEMP_E enColorTemp = (XBH_COLORTEMP_E)request.readInt32();
+    XBH_GAIN_OFFSET_DATA_S stInfo;
+    s32Ret = pXbhPlatformApiImpl->getAndroidColorTempPara(enColorTemp, &stInfo);
+    reply->writeInt32(stInfo.u32RedGain);
+    reply->writeInt32(stInfo.u32GreenGain);
+    reply->writeInt32(stInfo.u32BlueGain);
+    reply->writeInt32(stInfo.u32RedOffset);
+    reply->writeInt32(stInfo.u32GreenOffset);
+    reply->writeInt32(stInfo.u32BlueOffset);
+    return s32Ret;
+}
+
+static XBH_S32 saveColorTempPara(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_COLORTEMP_E enColorTemp = (XBH_COLORTEMP_E)request.readInt32();
+    XBH_GAIN_OFFSET_DATA_S stInfo;
+    stInfo.u32RedGain = request.readInt32();
+    stInfo.u32GreenGain = request.readInt32();
+    stInfo.u32BlueGain = request.readInt32();
+    stInfo.u32RedOffset = request.readInt32();
+    stInfo.u32GreenOffset = request.readInt32();
+    stInfo.u32BlueOffset = request.readInt32();
+    s32Ret = pXbhPlatformApiImpl->saveColorTempPara(enColorTemp, &stInfo);
+    return s32Ret;
+}
+
+static XBH_S32 loadColorTempPara(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_COLORTEMP_E enColorTemp = (XBH_COLORTEMP_E)request.readInt32();
+    XBH_GAIN_OFFSET_DATA_S stInfo;
+    s32Ret = pXbhPlatformApiImpl->loadColorTempPara(enColorTemp, &stInfo);
+    reply->writeInt32(stInfo.u32RedGain);
+    reply->writeInt32(stInfo.u32GreenGain);
+    reply->writeInt32(stInfo.u32BlueGain);
+    reply->writeInt32(stInfo.u32RedOffset);
+    reply->writeInt32(stInfo.u32GreenOffset);
+    reply->writeInt32(stInfo.u32BlueOffset);
+    return s32Ret;
+}
+
 
 //------------------------------------------------------------------------ PICTURE end -----------------------------------------------------------------------
 
@@ -1253,6 +1336,24 @@ static XBH_S32 getHdmiRxAudioSampleFreq(const Parcel &request, Parcel *reply)
     reply->writeInt32(u32Data);
     return s32Ret;
 }
+static XBH_S32 getEdidInvaild(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_U32 u32EdidType = request.readInt32();
+    XBH_U8 edidInvaild = 0;
+    s32Ret = pXbhPlatformApiImpl->getEdidInvaild((XBH_HDMIRX_EDID_TYPE_E)u32EdidType, &edidInvaild);
+    reply->writeInt32(edidInvaild);
+    return s32Ret;
+}
+
+static XBH_S32 getHdmiRxAudioLocked(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    XBH_U32 u32Data = 0;
+    s32Ret = pXbhPlatformApiImpl->getHdmiRxAudioLocked(&u32Data);
+    reply->writeInt32(u32Data);
+    return s32Ret;
+}
 //------------------------------------------------------------------------------- SOURCE end ------------------------------------------------------
 
 //------------------------------------------------------------------------------ SYSTEM start -----------------------------------------------------
@@ -1329,6 +1430,58 @@ static XBH_S32 getSourceTouchState(const Parcel &request, Parcel *reply)
     return s32Ret;
 }
 
+static XBH_S32 setErrorDetectState(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_U32 u32Value = request.readInt32();
+    XBH_U32 u32DetectType  = request.readInt32();
+    s32Ret = pXbhPlatformApiImpl->setErrorDetectState((XBH_BOOL)u32Value, u32DetectType);
+    return s32Ret;
+}
+
+static XBH_S32 getErrorDetectState(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_U32 u32Value = 0;
+    XBH_U32 u32DetectType = 0;
+    s32Ret = pXbhPlatformApiImpl->getErrorDetectState((XBH_BOOL *)&u32Value, &u32DetectType);
+    reply->writeInt32(u32Value);
+    reply->writeInt32(u32DetectType);
+    return s32Ret;
+}
+
+static XBH_S32 getErrorCode(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_U32 u32ErrorCode = 0;
+    s32Ret = pXbhPlatformApiImpl->getErrorCode(&u32ErrorCode);
+    reply->writeInt32(u32ErrorCode);
+    return s32Ret;
+}
+
+static XBH_S32 clearErrorCode(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    s32Ret = pXbhPlatformApiImpl->clearErrorCode();
+    return s32Ret;
+}
+
+static XBH_S32  setSecurityHvbKey(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    s32Ret = pXbhPlatformApiImpl->setSecurityHvbKey();
+    return s32Ret;
+}
+
+static XBH_S32 getSecurityHvbKeyStatus(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_U32 u32Status = 0;
+    s32Ret = pXbhPlatformApiImpl->getSecurityHvbKeyStatus(&u32Status);
+    reply->writeInt32(u32Status);
+    return s32Ret;
+}
+
 static XBH_S32 setNonThroughTouchRegion(const Parcel &request, Parcel *reply)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
@@ -1367,6 +1520,18 @@ static XBH_S32 setTouchScaleRect(const Parcel &request, Parcel *reply)
     return s32Ret;
 }
 
+static XBH_S32 setTouchScalingRegion(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_S32 resolution = request.readInt32();
+    XBH_S32 x = request.readInt32();
+    XBH_S32 y = request.readInt32();
+    XBH_S32 w = request.readInt32();
+    XBH_S32 h = request.readInt32();
+    s32Ret = XbhTouchManager::getInstance()->setTouchScalingRegion(resolution, x, y, w, h);
+    return s32Ret;
+}
+
 static XBH_S32 sendKeyToTp(const Parcel &request, Parcel *reply)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
@@ -1393,6 +1558,25 @@ static XBH_S32 setChipRunTime(const Parcel &request, Parcel *reply)
     XBH_S32 s32Ret = XBH_FAILURE;
     XBH_S32 time = request.readInt32();
     s32Ret = pXbhPlatformApiImpl->setChipRunTime(time);
+    return s32Ret;
+}
+
+static XBH_S32 setReferRTCInfo(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    String8 infoString(request.readString16());
+    const XBH_CHAR *info = infoString.c_str();
+    s32Ret = pXbhPlatformApiImpl->setReferRTCInfo(info);
+    return s32Ret;
+}
+
+static XBH_S32 getReferRTCInfo(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    //Align with XBH_CUSDATA_BOE_RTC_TEST_INFORMATION_LEN
+    XBH_CHAR info[64] = {0};
+    s32Ret = pXbhPlatformApiImpl->getReferRTCInfo(info);
+    reply->writeString16(String16(info));
     return s32Ret;
 }
 
@@ -1681,6 +1865,55 @@ static XBH_S32 getSn(const Parcel &request, Parcel *reply)
     return s32Ret;
 }
 
+static XBH_S32 setCustProductInfo(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    String8 infoString(request.readString16());
+    const XBH_CHAR *info = infoString.c_str();
+    s32Ret = pXbhPlatformApiImpl->setCustProductInfo(info);
+    return s32Ret;
+}
+
+static XBH_S32 getCustProductInfo(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    //Align with XBH_CUSDATA_HUAWEI_PRODUCTION_INFORMATION_LEN
+    XBH_CHAR info[512] = {0};
+    s32Ret = pXbhPlatformApiImpl->getCustProductInfo(info);
+    reply->writeString16(String16(info));
+    return s32Ret;
+}
+
+static XBH_S32 getOpsWakeSoc(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_U32 source = request.readInt32();
+    int u32Value = 0;
+    s32Ret = pXbhPlatformApiImpl->getOpsWakeSoc((XBH_BOOL *)&u32Value, XBH_SOURCE_E(source));
+    reply->writeInt32(u32Value);
+    return s32Ret;
+}
+
+static XBH_S32 getOpsOperationStatus(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_U32 source = request.readInt32();
+    int u32Value = 0;
+    s32Ret = pXbhPlatformApiImpl->getOpsOperationStatus((XBH_BOOL *)&u32Value, XBH_SOURCE_E(source));
+    reply->writeInt32(u32Value);
+    return s32Ret;
+}
+
+static XBH_S32 setOpsRecovery(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_U32 bEnable = request.readInt32();
+    XBH_U32 source = request.readInt32();
+    
+    s32Ret = pXbhPlatformApiImpl->setOpsRecovery((XBH_BOOL)bEnable, XBH_SOURCE_E(source));
+    return s32Ret;
+}
+
 static XBH_S32 setHdcp(const Parcel &request, Parcel *reply)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
@@ -1701,6 +1934,97 @@ static XBH_S32 getHdcpKeydata(const Parcel &request, Parcel *reply)
     reply->writeString16(String16(pBuff));
     return s32Ret;
 }
+static XBH_S32 getUSBCForwardReverseInsertionDet(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    int srcIdx = request.readInt32();
+    int u32Value = 0;
+    s32Ret = pXbhPlatformApiImpl->getUSBCForwardReverseInsertionDet(XBH_SOURCE_E(srcIdx), &u32Value);
+    reply->writeInt32(u32Value);
+    return s32Ret;
+}
+
+static XBH_S32 setMultiUser(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    String8 multiUser(request.readString16());
+    const XBH_CHAR *user = multiUser.c_str();
+    XLOGE("setMultiUser status=%s",user);
+    s32Ret = pXbhPlatformApiImpl->setMultiUser(user);
+    return s32Ret;
+}
+
+static XBH_S32 getMultiUser(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_CHAR currentMultiUser[64] = {0};
+    s32Ret = pXbhPlatformApiImpl->getMultiUser(currentMultiUser);
+    XLOGE("getMultiUser status=%s",currentMultiUser);
+    reply->writeString16(String16(currentMultiUser));
+    return s32Ret;
+}
+
+static XBH_S32 setVSPage(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    String8 vspage(request.readString16());
+    const XBH_CHAR *page = vspage.c_str();
+    XLOGE("setVSPage status=%s",page);
+    s32Ret = pXbhPlatformApiImpl->setVSPage(page);
+    return s32Ret;
+}
+
+static XBH_S32 getVSPage(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_CHAR currentVSPage[64] = {0};
+    s32Ret = pXbhPlatformApiImpl->getVSPage(currentVSPage);
+    XLOGE("getVSPage status=%s",currentVSPage);
+    reply->writeString16(String16(currentVSPage));
+    return s32Ret;
+}
+
+static XBH_S32 setCustomSKU(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    String8 customSKU(request.readString16());
+    const XBH_CHAR *sku = customSKU.c_str();
+    XLOGE("setCustomSKU status=%s",sku);
+    s32Ret = pXbhPlatformApiImpl->setCustomSKU(sku);
+    return s32Ret;
+}
+
+static XBH_S32 getCustomSKU(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_CHAR currentCustomSKU[64] = {0};
+    s32Ret = pXbhPlatformApiImpl->getCustomSKU(currentCustomSKU);
+    XLOGE("getCustomSKU status=%s",currentCustomSKU);
+    reply->writeString16(String16(currentCustomSKU));
+    return s32Ret;
+}
+
+
+static XBH_S32 setBootMode(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    String8 bootMode(request.readString16());
+    const XBH_CHAR *mode = bootMode.c_str();
+    XLOGE("setBootMode status=%s",mode);
+    s32Ret = pXbhPlatformApiImpl->setBootMode(mode);
+    return s32Ret;
+}
+
+static XBH_S32 getBootMode(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_CHAR currentBootMode[64] = {0};
+    s32Ret = pXbhPlatformApiImpl->getBootMode(currentBootMode);
+    XLOGE("getBootMode status=%s",currentBootMode);
+    reply->writeString16(String16(currentBootMode));
+    return s32Ret;
+}
+
 static XBH_S32 getHdcpStatus(const Parcel &request, Parcel *reply)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
@@ -2090,6 +2414,23 @@ static XBH_S32 getUsbcConfig(const Parcel &request, Parcel *reply)
     XBH_S32 type = 0;
     s32Ret = pXbhPlatformApiImpl->getUsbcConfig(&type);
     reply->writeInt32(type);
+    return s32Ret;
+}
+
+static XBH_S32 getHostOrDeviceStatus(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_S32 type = 0;
+    s32Ret = pXbhPlatformApiImpl->getHostOrDeviceStatus(&type);
+    reply->writeInt32(type);
+    return s32Ret;
+}
+
+static XBH_S32 setHostOrDeviceStatus(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_S32 type = request.readInt32();
+    s32Ret = pXbhPlatformApiImpl->setHostOrDeviceStatus(type);
     return s32Ret;
 }
 
@@ -2605,6 +2946,27 @@ static XBH_S32 upgradeExtendIc(const Parcel &request, Parcel *reply)
     XBH_U32 force = request.readInt32();
     XBH_U32 devType = request.readInt32();
     s32Ret = pXbhPlatformApiImpl->upgradeExtendIc(fileName, (XBH_BOOL)force, devType);
+    return s32Ret;
+}
+
+
+static XBH_S32 upgradeExtendIcByData(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_U8  data[1024*1024]= {0};//最大1M
+    XBH_U32 len = request.readInt32();
+    if(len > 1024 * 1024)
+    {
+        XLOGE("The transmitted data exceeds 1M and returns a failure");
+        return s32Ret;
+    }
+    for(int i=0; i<len; i++)
+    {
+        data[i] = (XBH_U8)request.readInt32();
+    }
+    XBH_U32 force = request.readInt32();
+    XBH_U32 devType = request.readInt32();
+    s32Ret = pXbhPlatformApiImpl->upgradeExtendIcByData(data,len, (XBH_BOOL)force, devType);
     return s32Ret;
 }
 
@@ -3367,6 +3729,13 @@ static XBH_S32 getRkpStatus(const Parcel &request, Parcel *reply)
     return s32Ret;
 }
 
+static XBH_S32 prepareIncreaseBinUpgrade(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    s32Ret = pXbhPlatformApiImpl->prepareIncreaseBinUpgrade();
+    return s32Ret;
+}
+
 static XBH_S32 setSmartPnData(const Parcel &request, Parcel *reply)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
@@ -3617,17 +3986,11 @@ static XBH_S32 setMicCertificate(const Parcel &request, Parcel *reply)
 
 static XBH_S32 getMicLicenseState(const Parcel &request, Parcel *reply)
 {
-    char *lic_response = "/data/vendor/lic_response";
-    if(access(lic_response, F_OK) == 0)
-    {
-        reply->writeInt32(0);
-        return XBH_SUCCESS;
-    }
-    else
-    {
-        reply->writeInt32(1);
-        return XBH_FAILURE;
-    }
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_S32 u32Value = 0;
+    s32Ret = pXbhPlatformApiImpl->getMicLicenseState(&u32Value);
+    reply->writeInt32(u32Value);
+    return s32Ret; 
 }
 
 static XBH_S32 burnFactorySN(const Parcel &request, Parcel *reply)
@@ -3659,6 +4022,49 @@ static XBH_S32 setTypeCPdAbility(const Parcel &request, Parcel *reply)
     //reply->writeString16(String16(snInfo));
     return s32Ret;
 }
+
+static XBH_S32 SendOPSBypassData(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_U32 bypass_type = request.readInt32();
+    XBH_U8 datalen = (XBH_U8)request.readInt32();
+    XBH_U8 data[255] = {0};
+    for (int i = 0; i < datalen; i++)
+    {
+        data[i] = (XBH_U8)request.readInt32();
+    }
+    s32Ret = pXbhPlatformApiImpl->SendOPSBypassData((XBH_SOURCE_E)bypass_type, datalen, data);
+    return s32Ret;
+}
+
+static XBH_S32 getKtcTouchInfo(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    //Align with XBH_CUSDATA_BOE_RTC_TEST_INFORMATION_LEN
+    XBH_CHAR info[128] = {0};
+    s32Ret = pXbhPlatformApiImpl->getKtcTouchInfo(info);
+    reply->writeString16(String16(info));
+    return s32Ret;
+}
+
+static XBH_S32 getEmmcVersion(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_U32 u32Value = 0;
+    s32Ret = pXbhPlatformApiImpl->getEmmcVersion(&u32Value);
+    reply->writeInt32(u32Value);
+    return s32Ret;
+}
+
+static XBH_S32 getEmmcLifeTime(const Parcel &request, Parcel *reply)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_U32 u32Value = 0;
+    s32Ret = pXbhPlatformApiImpl->getEmmcLifeTime(&u32Value);
+    reply->writeInt32(u32Value);
+    return s32Ret;
+}
+
 
 //---------------------------------------------------------------------------- DEVICE end -----------------------------------------------------------
 
@@ -3704,6 +4110,10 @@ static LocalAtomicInfo g_astCustomerModuleLocalAtomicInfo[] = {
     {CMD_PICTURE_GET_LOCALDIIMMNG,                  getLocalDimmingEnable},
     {CMD_PICTURE_GETBACKLIGHTWITHOUTSAVE,           getBacklightWithOutSave},
     {CMD_PICTURE_SETSHARPENABLE,                    setSharpEnable},
+    {CMD_PICTURE_SAVECOLORTEMPPARE,                 saveColorTempPara},
+    {CMD_PICTURE_LOADCOLORTEMPPARE,                 loadColorTempPara},
+    {CMD_PICTURE_SETANDROIDCOLORTEMPPARE,           setAndroidColorTempPara},
+    {CMD_PICTURE_GETANDROIDCOLORTEMPPARE,           getAndroidColorTempPara},
 
     //AUDIO
     {CMD_AUDIO_SETSOUNDMODE,                        setSoundMode},
@@ -3799,6 +4209,9 @@ static LocalAtomicInfo g_astCustomerModuleLocalAtomicInfo[] = {
     {CMD_SOURCE_SETSOURCEEDIDTYPE,                  setSourceEdidType},
     {CMD_SOURCE_SETVIDEOTXMODE,                     setVideoTxMode},
     {CMD_SOURCE_GETVIDEOTXMODE,                     getVideoTxMode},
+    {CMD_SOURCE_GETHDMIRXAUDIOSAMPLEFREQ,           getHdmiRxAudioSampleFreq},
+    {CMD_SOURCE_GETEDIDINVAILD,                     getEdidInvaild},
+    {CMD_SOURCE_GETHDMIRXAUDIOLOCKED,               getHdmiRxAudioLocked},
 
     //SYSTEM
     {CMD_SYSTEM_GETWAKEUP,                          getWakeUpReason},
@@ -3848,6 +4261,9 @@ static LocalAtomicInfo g_astCustomerModuleLocalAtomicInfo[] = {
     {CMD_SYSTEM_GETMICLICENSESTATE,                 getMicLicenseState},
     {CMD_SYSTEM_SETMICCERTIFICATE,                  setMicCertificate},
     {CMD_SYSTEM_SETSETTYPECPDABILITY,               setTypeCPdAbility},
+    {CMD_SYSTEM_GETEDIDSN,                          getEdidSn},
+    {CMD_SYSTEM_GETEDIDMODELNAME,                   getEdidModelName},
+    {CMD_SYSTEM_SETTOUCHSCALINGREGION,              setTouchScalingRegion},
     //FACTORY
     {CMD_FACTORY_SETOVERSCAN,                       setOverscan},
     {CMD_FACTORY_GETOVERSCAN,                       getOverscan},
@@ -3919,6 +4335,21 @@ static LocalAtomicInfo g_astCustomerModuleLocalAtomicInfo[] = {
     {CMD_FACTORY_SETRKPSTATUSDATA,                  setRkpStatus},
     {CMD_FACTORY_GETRKPSTATUSDATA,                  getRkpStatus},
     {CMD_FACTORY_GETHDCPKEYDATA,                    getHdcpKeydata},
+    {CMD_FACTORY_GETUSBCFORWARDREVERSEINSERTIONDET, getUSBCForwardReverseInsertionDet},
+    {CMD_FACTORY_SETMULTIUSER,                      setMultiUser},
+    {CMD_FACTORY_GETMULTIUSER,                      getMultiUser},
+    {CMD_FACTORY_SETVSPAGE,                         setVSPage},
+    {CMD_FACTORY_GETVSPAGE,                         getVSPage},
+    {CMD_FACTORY_SETCUSTOMSKU,                      setCustomSKU},
+    {CMD_FACTORY_GETCUSTOMSKU,                      getCustomSKU},
+    {CMD_FACTORY_SETBOOTMODE,                       setBootMode},
+    {CMD_FACTORY_GETBOOTMODE,                       getBootMode},
+    {CMD_FACTORY_GETKTCTOUCHINFO,                   getKtcTouchInfo},
+    {CMD_FACTORY_PREPAREINCREASEBINUPGRADE,         prepareIncreaseBinUpgrade},
+    {CMD_FACTORY_SETSECURITYHVBKEY,                 setSecurityHvbKey},
+    {CMD_FACTORY_GETSECURITYHVBKEYSTATUS,           getSecurityHvbKeyStatus},
+    {CMD_FACTORY_GETHOSTORDEVICESTATUS,             getHostOrDeviceStatus},
+    {CMD_FACTORY_SETHOSTORDEVICESTATUS,             setHostOrDeviceStatus},
     //DEVICE
     {CMD_DEVICE_SETGPIOOUTPUTVALUE,                 setGpioOutputValue},
     {CMD_DEVICE_GETGPIOOUTPUTVALUE,                 getGpioOutputValue},
@@ -4032,6 +4463,21 @@ static LocalAtomicInfo g_astCustomerModuleLocalAtomicInfo[] = {
     {CMD_DEVICE_GETHALLSENSORPEN,                   getHallSensorPen},
     {CMD_DEVICE_GETOPSSYSTEMTYPE,                   getOpsSystemType},
     {CMD_DEVICE_GETNTCVALUE,                        getNTCValue},
+    {CMD_DEVICE_SETCUSTPRODUCTINFO,                 setCustProductInfo},
+    {CMD_DEVICE_GETCUSTPRODUCTINFO,                 getCustProductInfo},
+    {CMD_DEVICE_GETOPSWAKESOC,                      getOpsWakeSoc},
+    {CMD_DEVICE_GETOPSOPERATIONSTATUS,              getOpsOperationStatus},
+    {CMD_DEVICE_SETOPSRECOVERY,                     setOpsRecovery},
+    {CMD_DEVICE_SENDOPSBYPASSDATA,                  SendOPSBypassData},
+    {CMD_DEVICE_SETREFERRTCINFO,                    setReferRTCInfo},
+    {CMD_DEVICE_GETREFERRTCINFO,                    getReferRTCInfo},
+    {CMD_DEVICE_SETERRDETSTATE,                     setErrorDetectState},
+    {CMD_DEVICE_GETERRDETSTATE,                     getErrorDetectState},
+    {CMD_DEVICE_GETERRORCODE,                       getErrorCode},
+    {CMD_DEVICE_CLEARERRORCODE,                     clearErrorCode},
+    {CMD_DEVICE_GETEMMCVERSION,                     getEmmcVersion},
+    {CMD_DEVICE_GETEMMCLIFETIME,                    getEmmcLifeTime},
+    {CMD_DEVICE_UPGRADEEXTERNDICBYDATA,             upgradeExtendIcByData},
 };
 
 static void platformCreate()
@@ -4158,6 +4604,12 @@ static void init()
 
     // Rj45 to Usb
     XbhRj45ToUsbManager::getInstance();
+
+    //pd ic
+    XbhPdIcManager::getInstance();
+
+    //usb hub
+    XbhUsbHubManager::getInstance();
 
     //是否使用Android原生的rtc实现
     #ifdef XBH_USE_NATIVE_RTC

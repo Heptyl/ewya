@@ -108,7 +108,8 @@ LOCAL_SHARED_LIBRARIES := \
     libscreencontrol_jni \
     libssl \
     libcrypto \
-    libms9282
+    libms9282 \
+    libusb
 
 ifeq ($(shell test $(PLATFORM_SDK_VERSION) -ge 28&& echo OK),OK)
 LOCAL_SHARED_LIBRARIES+=vendor.amlogic.hardware.systemcontrol@1.0

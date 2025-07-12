@@ -23,6 +23,7 @@
 #include "front2_s2.h"
 #include "front2_u9.h"
 #include "front3_u8.h"
+#include "front_wxq_lg8195_311_3h_v11.h"
 
 XbhFrontBoard*                          XbhFrontBoard::mInstance = XBH_NULL;
 XbhMutex                                XbhFrontBoard::mLock;
@@ -198,6 +199,18 @@ static HDMI_SW_OPT_TABLE f2s2_switch_iic_table[1] = {
 static HDMI_SWITCH_PORT f2s2_switch_port_table[1] = {
     XBH_F2S2_HDMI_SWITCH_PORT_TABLE
 };
+/*******************************************************************************FRONT WXQ_LG8195_311_3H_V11*****************************************************************************/
+static XBH_U8 fwxqlg81953113hv11_switch_table[1] = {
+    XBH_F_WXQ_LG8195_311_3H_V11_HDMI_SWITCH_TABLE
+};
+
+static HDMI_SW_OPT_TABLE fwxqlg81953113hv11_switch_iic_table[1] = {
+    XBH_F_WXQ_LG8195_311_3H_V11_HDMI_SWITCH_IIC_TABLE
+};
+
+static HDMI_SWITCH_PORT fwxqlg81953113hv11_switch_port_table[1] = {
+    XBH_F_WXQ_LG8195_311_3H_V11_HDMI_SWITCH_PORT_TABLE
+};
 
 /*******************************************************************************FRONT3 U8*****************************************************************************/
 static XBH_U8 f3u8_switch_table[1] = {
@@ -233,6 +246,8 @@ XBH_S32 XbhFrontBoard::getHdmiSwitchI2cTable(HDMI_SW_OPT_TABLE *table)
     table->pLevel = mOptTable.pLevel;
     table->rGpio = mOptTable.rGpio;
     table->rLevel = mOptTable.rLevel;
+    table->sGpio2 = mOptTable.sGpio2;
+    table->sLevel2 = mOptTable.sLevel2;
     return XBH_SUCCESS;
 }
 
@@ -398,6 +413,9 @@ XBH_S32 XbhFrontBoard::followToAndroidExtBefore(XBH_VOID)
         case FRONT3_U8_BOARD:
             SELECT_GPIO_OPT_TABLE_EXT(source_android_table_ext_before_3_u8);
         break;
+        case FRONT_WXQ_LG8195_311_3H_V1_1_BOARD:
+            SELECT_GPIO_OPT_TABLE_EXT(source_android_table_ext_before_wxq_lg8195_311_3h_v11);
+        break;
         default:
             XLOGE(" followToAndroidExtBefore not found front board ");
         break;
@@ -450,6 +468,9 @@ XBH_S32 XbhFrontBoard::followToAndroidExtAfter(XBH_VOID)
         break;
         case FRONT3_U8_BOARD:
             SELECT_GPIO_OPT_TABLE_EXT(source_android_table_ext_after_3_u8);
+        break;
+        case FRONT_WXQ_LG8195_311_3H_V1_1_BOARD:
+            SELECT_GPIO_OPT_TABLE_EXT(source_android_table_ext_after_wxq_lg8195_311_3h_v11);
         break;
         default:
             XLOGE(" followToAndroidExtAfter not found front board ");
@@ -504,6 +525,9 @@ XBH_S32 XbhFrontBoard::followToSrcExtBefore(XBH_VOID)
         case FRONT3_U8_BOARD:
             SELECT_GPIO_OPT_TABLE_EXT(source_src_table_ext_before_3_u8);
         break;
+        case FRONT_WXQ_LG8195_311_3H_V1_1_BOARD:
+            SELECT_GPIO_OPT_TABLE_EXT(source_src_table_ext_before_wxq_lg8195_311_3h_v11);
+        break;
         default:
             XLOGE(" followToSrcExtBefore not found front board ");
         break;
@@ -556,6 +580,9 @@ XBH_S32 XbhFrontBoard::followToSrcExtAfter(XBH_VOID)
         break;
         case FRONT3_U8_BOARD:
             SELECT_GPIO_OPT_TABLE_EXT(source_src_table_ext_after_3_u8);
+        break;
+        case FRONT_WXQ_LG8195_311_3H_V1_1_BOARD:
+            SELECT_GPIO_OPT_TABLE_EXT(source_src_table_ext_after_wxq_lg8195_311_3h_v11);
         break;
         default:
             XLOGE(" followToSrcExtAfter not found front board ");
@@ -610,6 +637,9 @@ XBH_S32 XbhFrontBoard::followToFUsbc1ExtBefore(XBH_VOID)
         case FRONT3_U8_BOARD:
             SELECT_GPIO_OPT_TABLE_EXT(source_f_usbc1_table_ext_before_3_u8);
         break;
+        case FRONT_WXQ_LG8195_311_3H_V1_1_BOARD:
+            SELECT_GPIO_OPT_TABLE_EXT(source_f_usbc1_table_ext_before_wxq_lg8195_311_3h_v11);
+        break;
         default:
             XLOGE(" followToFUsbc1ExtBefore not found front board ");
         break;
@@ -662,6 +692,9 @@ XBH_S32 XbhFrontBoard::followToFUsbc1ExtAfter(XBH_VOID)
         break;
         case FRONT3_U8_BOARD:
             SELECT_GPIO_OPT_TABLE_EXT(source_f_usbc1_table_ext_after_3_u8);
+        break;
+        case FRONT_WXQ_LG8195_311_3H_V1_1_BOARD:
+            SELECT_GPIO_OPT_TABLE_EXT(source_f_usbc1_table_ext_after_wxq_lg8195_311_3h_v11);
         break;
         default:
             XLOGE(" followToFUsbc1ExtAfter not found front board ");
@@ -822,6 +855,9 @@ XBH_S32 XbhFrontBoard::followToFHdmi1ExtBefore(XBH_VOID)
         case FRONT3_U8_BOARD:
             SELECT_GPIO_OPT_TABLE_EXT(source_f_hdmi1_table_ext_before_3_u8);
         break;
+        case FRONT_WXQ_LG8195_311_3H_V1_1_BOARD:
+            SELECT_GPIO_OPT_TABLE_EXT(source_f_hdmi1_table_ext_before_wxq_lg8195_311_3h_v11);
+        break;
         default:
             XLOGE(" followToFHdmi1ExtBefore not found front board ");
         break;
@@ -875,6 +911,9 @@ XBH_S32 XbhFrontBoard::followToFHdmi1ExtAfter(XBH_VOID)
         case FRONT3_U8_BOARD:
             SELECT_GPIO_OPT_TABLE_EXT(source_f_hdmi1_table_ext_after_3_u8);
         break;
+        case FRONT_WXQ_LG8195_311_3H_V1_1_BOARD:
+            SELECT_GPIO_OPT_TABLE_EXT(source_f_hdmi1_table_ext_after_wxq_lg8195_311_3h_v11);
+        break;
         default:
             XLOGE(" followToFHdmi1ExtAfter not found front board ");
         break;
@@ -924,6 +963,9 @@ XBH_S32 XbhFrontBoard::followToFHdmi2ExtBefore(XBH_VOID)
         break;
         case FRONT2_S2_BOARD:
             SELECT_GPIO_OPT_TABLE_EXT(source_f_hdmi2_table_ext_before_2_s2);
+        break;
+        case FRONT_WXQ_LG8195_311_3H_V1_1_BOARD:
+            SELECT_GPIO_OPT_TABLE_EXT(source_f_hdmi2_table_ext_before_wxq_lg8195_311_3h_v11);
         break;
         default:
             XLOGE(" followToFHdmi2ExtBefore not found front board ");
@@ -975,8 +1017,39 @@ XBH_S32 XbhFrontBoard::followToFHdmi2ExtAfter(XBH_VOID)
         case FRONT2_S2_BOARD:
             SELECT_GPIO_OPT_TABLE_EXT(source_f_hdmi2_table_ext_after_2_s2);
         break;
+        case FRONT_WXQ_LG8195_311_3H_V1_1_BOARD:
+            SELECT_GPIO_OPT_TABLE_EXT(source_f_hdmi2_table_ext_after_wxq_lg8195_311_3h_v11);
+        break;        
         default:
             XLOGE(" followToFHdmi2ExtAfter not found front board ");
+        break;
+    }
+    return XBH_SUCCESS;
+}
+
+XBH_S32 XbhFrontBoard::followToFHdmi3ExtBefore(XBH_VOID)
+{
+    switch(mFboardType)
+    {
+        case FRONT_WXQ_LG8195_311_3H_V1_1_BOARD:
+            SELECT_GPIO_OPT_TABLE_EXT(source_f_hdmi3_table_ext_before_wxq_lg8195_311_3h_v11);
+        break;        
+        default:
+            XLOGE(" followToFHdmi3ExtBefore not found front board ");
+        break;
+    }
+    return XBH_SUCCESS;
+}
+
+XBH_S32 XbhFrontBoard::followToFHdmi3ExtAfter(XBH_VOID)
+{
+    switch(mFboardType)
+    {
+        case FRONT_WXQ_LG8195_311_3H_V1_1_BOARD:
+            SELECT_GPIO_OPT_TABLE_EXT(source_f_hdmi3_table_ext_after_wxq_lg8195_311_3h_v11);
+        break;        
+        default:
+            XLOGE(" followToFHdmi3ExtAfter not found front board ");
         break;
     }
     return XBH_SUCCESS;
@@ -1060,6 +1133,11 @@ XBH_S32 XbhFrontBoard::init()
             mSwitchType = f2s2_switch_table[0];
             memcpy(&mOptTable, &f2s2_switch_iic_table[0], sizeof(mOptTable));
             memcpy(&mPortTable, &f2s2_switch_port_table[0], sizeof(mPortTable));
+        break;
+        case FRONT_WXQ_LG8195_311_3H_V1_1_BOARD:
+            mSwitchType = fwxqlg81953113hv11_switch_table[0];
+            memcpy(&mOptTable, &fwxqlg81953113hv11_switch_iic_table[0], sizeof(mOptTable));
+            memcpy(&mPortTable, &fwxqlg81953113hv11_switch_port_table[0], sizeof(mPortTable));
         break;
         case FRONT3_U8_BOARD:
             mSwitchType = f3u8_switch_table[0];

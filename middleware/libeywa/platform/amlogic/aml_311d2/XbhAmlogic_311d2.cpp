@@ -18,6 +18,7 @@
 #include <sys/timerfd.h>
 #include <sys/sysinfo.h>
 #include <regex.h>
+#include <sys/stat.h>
 
 #include <hardware/aml_gpio.h>
 #include <hardware/board.h>
@@ -35,15 +36,20 @@
 #include "SystemControlClient.h"
 #include "PQType.h"
 #include "XbhNfcManager.h"
+#include "XbhMcuManager.h"
 #include "XbhService.h"
-
 #ifdef SUPPORT_TVSERVICE
 #include "TvServerHidlClient.h"
 #endif
+#include "XbhVgaEdidManager.h"
 
 using namespace android;
 
 #define XBH_CUST_PROPERTY_NOT_INIT "persist.vendor.xbh.prop_not_init"
+
+//版控版本是否相同
+#define CUST_VERSION_IS_DIFF  0
+#define CUST_VERSION_IS_SAME  1
 
 SystemControlClient *mSystemControlClient;
 static const char rtc_sysfs[] = "/sys/class/rtc";
@@ -380,6 +386,11 @@ XBH_S32 XbhAmlogic_311d2::setDebugEnable(XBH_BOOL bEnable)
     property_set("persist.vendor.xbh.rs232.enable", propVal);
     if(bEnable)
     {
+        #ifdef XBH_BOARD_GPIO_RS232_TX_EN
+        //enable rs232 tx in uboot
+        mSystemControlClient->setBootEnv("ubootenv.var.uartDebugEnable", "1");
+        #endif
+
         strcpy(ttyPath, "/dev/ttyS0");
         ttyfd = open(ttyPath, O_RDWR | O_NOCTTY | O_NONBLOCK);
         ret = tcsetattr(ttyfd, TCSANOW, &uart_debug_config);
@@ -392,7 +403,17 @@ XBH_S32 XbhAmlogic_311d2::setDebugEnable(XBH_BOOL bEnable)
     else
     {
         property_set("ctl.stop", "console");
+        #ifdef XBH_BOARD_GPIO_RS232_TX_EN
+        //don't enable rs232 tx in uboot
+        mSystemControlClient->setBootEnv("ubootenv.var.uartDebugEnable", "0");
+        #endif
     }
+
+    #ifdef XBH_BOARD_GPIO_RS232_TX_EN
+    s32Ret = setGpioOutputValue(XBH_BOARD_GPIO_RS232_TX_EN, XBH_BOARD_GPIO_RS232_TX_EN_ON);
+    XLOGD("%s: enable RS232 TX %s", __func__, (s32Ret == 0)?"ok":"fail");
+    #endif
+
     return s32Ret;
 
 }
@@ -575,6 +596,8 @@ XBH_S32 XbhAmlogic_311d2:: check_iic_funcs(XBH_S32 file)
 */
 XBH_S32 XbhAmlogic_311d2::setProjectId(const XBH_CHAR* strProjectId)
 {
+    //更新VGA EDID update标志
+    property_set("persist.vendor.xbh.vgaedid.update", "0");
     int entryCount = 0;
     std::string prop_path = std::string("/vendor/etc/projects/projectid_") + std::string(strProjectId) + std::string("/cusprop/cust.prop");
     if (access(const_cast<char *>(prop_path.c_str()), F_OK) == 0){
@@ -617,31 +640,52 @@ XBH_S32 XbhAmlogic_311d2::getProjectId(XBH_CHAR* strProjectId)
 XBH_S32 XbhAmlogic_311d2::loadProperty()
 {
     int entryCount = 0;
-    XBH_S32 flag = 0;
+    XBH_S32 flag = CUST_VERSION_IS_DIFF;
+    XBH_BOOL isFoundCustVersion = XBH_FALSE;
     XBH_CHAR propVal[PROPERTY_VALUE_MAX] = {0};
     XLOGD("%s %d loadProperty start !!!! \n", __func__, __LINE__);
     IniEntry* entries = XbhParseINI::parseINI("/mnt/cust/systemproperty.ini", &entryCount);
-    for (int i = 0; i < entryCount; i++) {
-        XLOGD("LYF==== %s = %s\n\n", entries[i].key, entries[i].value);
-        if(strcmp("persist.vendor.xbh.customerversion", entries[i].key) == 0)
-        {
-            if(property_get("persist.vendor.xbh.customerversion", propVal, "0000") > 0)
+
+    if(entries == NULL)
+    {
+        XLOGE("have not found systemproperty.ini under cust\n");
+        //没有相关文件，则不是版控包升级的实现方式，返回为版本相同，不需要重启
+        //否则会触发版控升级app做重启系统来升级版控包的动作
+        return CUST_VERSION_IS_SAME;
+    }
+    else
+    {
+        for (int i = 0; i < entryCount; i++) {
+            XLOGD("LYF==== %s = %s\n\n", entries[i].key, entries[i].value);
+            if(strcmp("persist.vendor.xbh.customerversion", entries[i].key) == 0)
             {
-                if(strcmp(propVal, entries[i].value) == 0)
+                isFoundCustVersion = XBH_TRUE;
+                if(property_get("persist.vendor.xbh.customerversion", propVal, "0000") > 0)
                 {
-                    flag = 1;
-                    XLOGD("LYF==== cust project as same as old !!!!!!!!!!!!!!!!!!!!!!!!!!!!!! \n\n");
-                    return flag;
+                    if(strcmp(propVal, entries[i].value) == 0)
+                    {
+                        flag = CUST_VERSION_IS_SAME;
+                        free(entries);
+                        XLOGD("LYF==== cust project as same as old !!!!!!!!!!!!!!!!!!!!!!!!!!!!!! \n\n");
+                        return flag;
+                    }
                 }
             }
+            property_set(entries[i].key, entries[i].value);
         }
-        property_set(entries[i].key, entries[i].value);
-    }
-    //如果解析成功,释放entries指向的内存,避免内存泄漏
-    if(entries != NULL)
-    {
+
+        //解析成功,释放entries指向的内存,避免内存泄漏
         free(entries);
+
+        if(!isFoundCustVersion)
+        {
+             XLOGE("have not found persist.vendor.xbh.customerversion in systemproperty.ini under cust\n");
+            //版控ini文件中没有cust版本号条目，则不是版控包升级的实现方式，返回为版本相同，不需要重启
+            //否则会触发版控升级app做重启系统来升级版控包的动作
+            return CUST_VERSION_IS_SAME;
+        }
     }
+
     return flag;
 }
 
@@ -1388,7 +1432,7 @@ XBH_S32 XbhAmlogic_311d2::getTconPower(XBH_BOOL *bEnable)
 
 XBH_S32 XbhAmlogic_311d2::setPanelPower(XBH_BOOL bEnable, XBH_PANEL_NUM_E enPanel)
 {
-XBH_CHAR propVal[PROPERTY_VALUE_MAX] = {0};
+    XBH_CHAR propVal[PROPERTY_VALUE_MAX] = {0};
     XBH_BOOL bNeedPanelOnOff = XBH_TRUE;
     if(mGpioFd < 0)
      {
@@ -1560,6 +1604,195 @@ XBH_S32 XbhAmlogic_311d2::getADCChannelValue(XBH_U32 u32Channel, XBH_U32 *u32Val
     }
 
     return s32Ret;
+}
+
+XBH_S32 XbhAmlogic_311d2::setAudioOutput(XBH_AUDIO_OUTPUT_E enAudioOutput)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    if (mAudioOutput != enAudioOutput)
+    {
+        switch (enAudioOutput)
+        {
+            default:
+            case XBH_AUDIO_OUTPUT_DET:
+            {
+                XBH_BOOL status = XBH_FALSE;
+                XbhService::getModuleInterface()->getHpDetectStatus(&status);
+                if (status)
+                {
+                    XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_SPEAKER, XBH_TRUE);
+                    XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_HEADPHONE, XBH_FALSE);
+                }
+                else
+                {
+                    XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_SPEAKER, XBH_FALSE);
+                    XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_HEADPHONE, XBH_TRUE);
+                }
+                break;
+            }
+            case XBH_AUDIO_OUTPUT_BOTH:
+            {
+                XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_SPEAKER, XBH_FALSE);
+                XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_HEADPHONE, XBH_FALSE);
+                break;
+            }
+            case XBH_AUDIO_OUTPUT_EXTERNAL:
+            {
+                XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_SPEAKER, XBH_TRUE);
+                XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_HEADPHONE, XBH_FALSE);
+                break;
+            }
+            case XBH_AUDIO_OUTPUT_INTERNAL:
+            {
+                XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_SPEAKER, XBH_FALSE);
+                XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_HEADPHONE, XBH_TRUE);
+                break;
+            }
+            case XBH_AUDIO_OUTPUT_USB:
+            {
+                XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_SPEAKER, XBH_TRUE);
+                XbhService::getPlatformInterface()->setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_HEADPHONE, XBH_TRUE);
+                break;
+            }
+        }
+    }
+    mAudioOutput = enAudioOutput;
+    return s32Ret;
+}
+
+XBH_S32 XbhAmlogic_311d2::getAudioOutput(XBH_AUDIO_OUTPUT_E *enAudioOutput)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    *enAudioOutput = mAudioOutput;
+    return s32Ret;
+}
+
+XBH_S32 XbhAmlogic_311d2::getMicLicenseState(XBH_S32* status)
+{   
+    XBH_S32 s32Ret = XBH_FAILURE;
+    const char* lic_response = "/data/vendor/lic_response";
+    const char* lic_status = "/data/vendor/lic_status";
+    std::string result;
+
+    property_set("ctl.start", "uac_app");
+    usleep(200 * 1000);
+    property_set("ctl.stop", "uac_app");
+
+    // Step 1: 判断 lic_response 文件是否存在
+    if (access(lic_response, F_OK) == 0) 
+    {
+        // 文件存在，读取 lic_status 状态
+        if (!XbhSysOpt::getInstance()->readSysfs(lic_status, result)) 
+        {
+            XLOGE("%s: %d Failed to read sysfs for lic_status", __FUNCTION__, __LINE__);
+            *status = s32Ret;
+            return s32Ret;
+        }
+
+        XLOGD("%s: %d MicLicenseState: %s", __FUNCTION__, __LINE__, result.c_str());
+
+        if (strcmp("pass", result.c_str()) == 0) 
+        {
+            // 状态 pass，开始读取文件并写入系统键值对
+            int fd = open(lic_response, O_RDONLY);
+            if (fd == -1) 
+            {
+                XLOGE("%s: %d Failed to open lic_response file", __FUNCTION__, __LINE__);
+                *status = s32Ret;
+                return s32Ret;
+            }
+
+            off_t size = lseek(fd, 0, SEEK_END);
+            if (size <= 0) 
+            {
+                close(fd);
+                XLOGE("%s: %d lic_response file is empty or invalid", __FUNCTION__, __LINE__);
+                *status = s32Ret;
+                return s32Ret;
+            }
+
+            lseek(fd, 0, SEEK_SET);
+            char* buffer = (char*)malloc(size + 1);
+            if (!buffer) 
+            {
+                close(fd);
+                XLOGE("%s: %d Memory allocation failed", __FUNCTION__, __LINE__);
+                *status = s32Ret;
+                return s32Ret;
+            }
+
+            ssize_t bytes_read = read(fd, buffer, size);
+            close(fd);
+
+            if (bytes_read <= 0 || bytes_read != size) 
+            {
+                free(buffer);
+                XLOGE("%s: %d Failed to read lic_response file content", __FUNCTION__, __LINE__);
+                *status = s32Ret;
+                return s32Ret;
+            }
+
+            buffer[bytes_read] = '\0';
+            s32Ret = mSystemControlClient->writeUnifyKey("lic_response", buffer) ? XBH_SUCCESS : XBH_FAILURE;
+            free(buffer);
+
+            if (s32Ret == XBH_SUCCESS) 
+            {
+                XLOGD("%s: %d writeUnifyKey success, size=%d", __FUNCTION__, __LINE__, size);
+            } else 
+            {
+                XLOGE("%s: %d writeUnifyKey failed, s32Ret=%d", __FUNCTION__, __LINE__, s32Ret);
+            }
+            *status = s32Ret;
+            return s32Ret;
+        }
+        else 
+        {
+            // lic_status 不是 pass
+            XLOGE("%s: %d MicLicenseState not pass: %s", __FUNCTION__, __LINE__, result.c_str());
+            *status = s32Ret;
+            return s32Ret;
+        }
+    }
+    else 
+    {
+        XLOGE("%s: %d Wrote response data !!", __FUNCTION__, __LINE__);
+        *status = s32Ret;
+        return s32Ret;
+    }
+}
+
+XBH_S32 XbhAmlogic_311d2::handleLicenseFileMissing()
+{
+    const char* lic_response = "/data/vendor/lic_response";
+    std::string strResponse;
+
+    if (access(lic_response, F_OK) != 0)
+    {
+        // 从统一存储区读取 lic_response 数据
+        if (!mSystemControlClient->readUnifyKey("lic_response", strResponse)) {
+            XLOGE("%s: %d Failed to read unify key 'lic_response'", __FUNCTION__, __LINE__);
+            return XBH_FAILURE;
+        }
+
+        // 创建 lic_response 文件并写入数据
+        int lic_response_fd = open(lic_response, O_CREAT | O_WRONLY | O_TRUNC, 0777);
+        if (lic_response_fd < 0) {
+            XLOGE("%s: %d Failed to create lic_response file", __FUNCTION__, __LINE__);
+            return XBH_FAILURE;
+        }
+
+        ssize_t writelen = write(lic_response_fd, strResponse.c_str(), strResponse.size());
+        close(lic_response_fd);
+
+        if (writelen != (ssize_t)strResponse.size()) {
+            XLOGE("%s: %d Failed to write data to lic_response", __FUNCTION__, __LINE__);
+            return XBH_FAILURE;
+        }
+
+        XLOGD("%s: %d Wrote response data to lic_response: %s", __FUNCTION__, __LINE__, strResponse.c_str());
+    }
+    return XBH_SUCCESS;
 }
 
 XBH_S32 XbhAmlogic_311d2::getTemperatureSensorValue(XBH_FLOAT *s32Value)
@@ -1863,14 +2096,13 @@ XBH_S32 XbhAmlogic_311d2::setHdmirxEdidType(XBH_S32 type)
                 TvService->setHdmiEdidVersion(port,edidType);
                 TvService->saveHdmiEdidVersion(port,edidType);
             }
-            
         //}
     }
 #else
     XLOGD("%s: %d not support tvservice\n",__func__,__LINE__);
 #endif
     XLOGD("set setHdmirxEdidType %d \n", type);
-    return s32Ret;
+    return XBH_SUCCESS;
 }
 
 XBH_S32 XbhAmlogic_311d2::getHdmirxEdidType(XBH_S32 *type)
@@ -1914,7 +2146,7 @@ XBH_S32 XbhAmlogic_311d2::getHdmirxEdidType(XBH_S32 *type)
         *type = 4;              // 自动模式
     }
     XLOGD("get HdmirxEdidType %d \n", *type);
-    return s32Ret;
+    return XBH_SUCCESS;
 }
 
 XBH_S32 XbhAmlogic_311d2::getSocHdmiEdidStatus(XBH_BOOL *enable)
@@ -2085,6 +2317,75 @@ XBH_S32 XbhAmlogic_311d2::getAttentionKeyStatus(XBH_BOOL* bEnable)
 
     XLOGW("%s:%d provisionKey(0x43) NOT found", __func__, __LINE__);
     return XBH_SUCCESS;
+}
+
+XBH_S32 XbhAmlogic_311d2::setHdcpKey(const XBH_CHAR* strPath, XBH_HDCP_TYPE_E type) 
+{
+    XLOGD("%s:%d setHdcpKey type = %d", __func__, __LINE__, type);
+
+    if (strPath == nullptr)
+    {
+        XLOGE("Null strPath pointer");
+        return XBH_FAILURE;
+    }
+
+    size_t pathLen = strlen(strPath);
+    if (pathLen >= FILEPATH_MAX_LENGTH)
+    {
+        XLOGE("Path too long (%zu/%d)" , pathLen, FILEPATH_MAX_LENGTH-1);
+        return XBH_FAILURE;
+    }
+
+    // 设置通用属性
+    property_set(XBH_BURN_HDCPKEY_PATH, strPath);
+    
+    // 类型处理
+    const XBH_CHAR* propName = nullptr;
+    switch (type)
+    {
+        case XBH_HDCP_TYPE_E::XBH_HDCP2_2:
+            propName = XBH_BURN_HDCP_RX22;
+            break;
+        case XBH_HDCP_TYPE_E::XBH_HDCP1_4:
+            propName = XBH_BURN_HDCP_RX14;
+            break;
+        case XBH_HDCP_TYPE_E::XBH_HDCP_TX_1_4:
+            propName = XBH_BURN_HDCP_TX14;
+            break;
+        default:
+            XLOGW("Unsupported HDCP type %d", type);
+            return XBH_FAILURE;
+    }
+
+    property_set(propName, "0"); // 触发烧录
+    XLOGD("Started burning %s key", propName);
+    return XBH_SUCCESS;
+}
+
+
+XBH_S32 XbhAmlogic_311d2::setHdcpKeyName(const XBH_CHAR* pBuff, XBH_HDCP_TYPE_E type)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    XLOGD("%s:%d setHdcpKeyName type = %d", __func__, __LINE__, type);
+    switch (type)
+    {
+        case XBH_HDCP_TYPE_E::XBH_HDCP1_4:
+            s32Ret = mSystemControlClient->writeUnifyKey("hdcp14name", pBuff) ? XBH_SUCCESS : XBH_FAILURE;
+            break;
+        case XBH_HDCP_TYPE_E::XBH_HDCP2_2:
+            s32Ret = mSystemControlClient->writeUnifyKey("hdcp22name", pBuff) ? XBH_SUCCESS : XBH_FAILURE;
+            break;
+        case XBH_HDCP_TYPE_E::XBH_HDCP_TX_1_4:
+            s32Ret = mSystemControlClient->writeUnifyKey("hdcptx14name", pBuff) ? XBH_SUCCESS : XBH_FAILURE;
+            break;
+        case XBH_HDCP_TYPE_E::XBH_HDCP_TX_2_2:
+            s32Ret = mSystemControlClient->writeUnifyKey("hdcptx22name", pBuff) ? XBH_SUCCESS : XBH_FAILURE;
+            break;
+        default:
+            XLOGW("%s:%d unsupported type=%d", __func__, __LINE__, type);
+            return XBH_FAILURE;
+    }
+    return s32Ret;
 }
 
 XBH_S32 XbhAmlogic_311d2::getHdcpKeyName(XBH_HDCP_TYPE_E type, XBH_CHAR* strHdcpFileName)
@@ -2267,9 +2568,429 @@ XBH_S32 XbhAmlogic_311d2::getColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN
     XLOGD("%s:%d FALLBACK default=1024  return FAILURE", __func__, __LINE__);
     return XBH_SUCCESS;
 }
+XBH_S32 XbhAmlogic_311d2::setMultiUser(const XBH_CHAR* status)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    XLOGE("311D2 will setMultiUser %s",status);
+    return mSystemControlClient->writeUnifyKey("mulit_user", status) ? XBH_SUCCESS : XBH_FAILURE;
+}
+
+XBH_S32 XbhAmlogic_311d2::getMultiUser(XBH_CHAR* status)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    std::string currentStatus;
+    if(mSystemControlClient->readUnifyKey("mulit_user", currentStatus)){
+        strcpy(status,currentStatus.c_str());
+        XLOGE("%s %d: multi user -> [%s] \n",__func__,__LINE__,status);
+    }
+    else
+    {
+        XLOGE("%s %d: multi user error \n",__func__,__LINE__);
+        s32Ret = XBH_FAILURE;
+    }
+    return s32Ret;
+}
+
+XBH_S32 XbhAmlogic_311d2::setNR(XBH_LEVEL_E enNrLevel) 
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    if(enNrLevel < XBH_LEVEL_OFF || enNrLevel >= XBH_LEVEL_BUTT)
+    {
+        XLOGE("%s: %d param error\n",__func__,__LINE__);
+        return s32Ret;
+    }
+
+    return mSystemControlClient->setNoiseReductionMode(enNrLevel, 1) >= 0 ? XBH_SUCCESS : XBH_FAILURE;
+}
+XBH_S32 XbhAmlogic_311d2::setVSPage(const XBH_CHAR* status)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    XLOGE("311D2 will setVSPage %s",status);
+    return mSystemControlClient->writeUnifyKey("viewsonic_service_page", status) ? XBH_SUCCESS : XBH_FAILURE;
+}
+
+XBH_S32 XbhAmlogic_311d2::getVSPage(XBH_CHAR* status)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    std::string currentStatus;
+    if(mSystemControlClient->readUnifyKey("viewsonic_service_page", currentStatus)){
+        strcpy(status,currentStatus.c_str());
+        XLOGE("%s %d: vs page -> [%s] \n",__func__,__LINE__,status);
+    }
+    else
+    {
+        XLOGE("%s %d: vs page error \n",__func__,__LINE__);
+        s32Ret = XBH_FAILURE;
+    }
+    return s32Ret;
+}
+
+XBH_S32 XbhAmlogic_311d2::setCustomSKU(const XBH_CHAR* status)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    XLOGE("311D2 will setCustomSKU %s",status);
+    return mSystemControlClient->writeUnifyKey("custom_sku", status) ? XBH_SUCCESS : XBH_FAILURE;
+}
+
+XBH_S32 XbhAmlogic_311d2::getCustomSKU(XBH_CHAR* status)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    std::string currentStatus;
+    if(mSystemControlClient->readUnifyKey("custom_sku", currentStatus)){
+        strcpy(status,currentStatus.c_str());
+        XLOGE("%s %d: custom sku -> [%s] \n",__func__,__LINE__,status);
+    }
+    else
+    {
+        XLOGE("%s %d: custom sku error \n",__func__,__LINE__);
+        s32Ret = XBH_FAILURE;
+    }
+    return s32Ret;
+}
+
+XBH_S32 XbhAmlogic_311d2::setBootMode(const XBH_CHAR* status)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    XLOGE("311D2 will setBootMode %s",status);
+    return mSystemControlClient->writeUnifyKey("boot_mode", status) ? XBH_SUCCESS : XBH_FAILURE;
+}
+
+XBH_S32 XbhAmlogic_311d2::getBootMode(XBH_CHAR* status)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    std::string currentStatus;
+    if(mSystemControlClient->readUnifyKey("boot_mode", currentStatus)){
+        strcpy(status,currentStatus.c_str());
+        XLOGE("%s %d: boot mode -> [%s] \n",__func__,__LINE__,status);
+    }
+    else
+    {
+        XLOGE("%s %d: boot mode error \n",__func__,__LINE__);
+        s32Ret = XBH_FAILURE;
+    }
+    return s32Ret;
+}
+
+XBH_S32 XbhAmlogic_311d2::getNR(XBH_LEVEL_E *enNrLevel) 
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    s32Ret = mSystemControlClient->getNoiseReductionMode();
+    if(s32Ret < XBH_LEVEL_OFF || s32Ret >= XBH_LEVEL_BUTT)
+    {
+        XLOGE("%s: %d value is error %d\n",__func__,__LINE__,s32Ret);
+        return XBH_FAILURE;
+    }
+    *enNrLevel = (XBH_LEVEL_E)s32Ret;
+    //XLOGI("%s: %d get DNR = %d\n",__func__,__LINE__,*enNrLevel);
+    return XBH_SUCCESS;
+}
 
 
+/**
+ * 获取OTG端口是HOST模式还是DEVICE模式, TYPE-B以及TYPE-C in/out端子均可连接SOC OTG，因方案各异
+*/
+XBH_S32 XbhAmlogic_311d2::getHostOrDeviceStatus(XBH_S32* type)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    XBH_CHAR propVal[PROPERTY_VALUE_MAX] = {0};
+    property_get("persist.vendor.xbh.usbotgswitch", propVal, "0");  //0:host    1:device
+    *type = atoi(propVal);
+    // XLOGD("%s %d:  eywa----getHostOrDeviceStatus---%d\n", __func__, __LINE__, *type);
+    return s32Ret;
+}
 
+/**
+ * 设置OTG端口是HOST模式还是DEVICE模式, TYPE-B以及TYPE-C in/out端子均可连接SOC OTG，因方案各异
+*/
+XBH_S32 XbhAmlogic_311d2::setHostOrDeviceStatus(XBH_S32 type)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    XBH_CHAR propVal[PROPERTY_VALUE_MAX] = {0};
+    
+    // 根据 type 参数决定HOST/DEVICE
+    if (type == XBH_DEVICE_MODE)
+    {
+        // 启用DEVICE
+        sprintf(propVal, "%d", XBH_DEVICE_MODE);
+        // XLOGD("%s %d:  Enabling DEVICE OTG\n", __func__, __LINE__);
+    }
+    else if (type == XBH_HOST_MODE)
+    {
+        // 启用HOST
+        sprintf(propVal, "%d", XBH_HOST_MODE);
+        // XLOGD("%s %d:  Enabling HOST OTG\n", __func__, __LINE__);
+    }
+    else
+    {
+        // 如果 type 不为 0 或 1，则返回失败
+        XLOGW("%s %d: Invalid type value: %d\n", __func__, __LINE__, type);
+        return XBH_FAILURE;
+    }
+
+    //  同步修改系统属性值
+    property_set("persist.vendor.xbh.usbotgswitch", propVal);
+    #ifdef XBH_BOARD_GPIO_USBC_IN_SW
+    s32Ret = this->XbhAmlogic_311d2::setGpioOutputValue(XBH_BOARD_GPIO_USBC_IN_SW, !type);
+    #endif
+    return s32Ret;
+}
+
+
+XBH_S32 XbhAmlogic_311d2::setContrast(XBH_U32 u32Value)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    if(u32Value < 0 || u32Value > 100)
+    {
+        XLOGD("%s: %d param error\n",__func__,__LINE__);
+        return s32Ret;
+    }
+    return mSystemControlClient->setContrast(u32Value, 1) >= 0 ? XBH_SUCCESS : XBH_FAILURE;
+}
+
+XBH_S32 XbhAmlogic_311d2::getContrast(XBH_U32 *u32Value)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    s32Ret = mSystemControlClient->getContrast();
+    if(s32Ret < 0 || s32Ret > 100)
+    {
+        XLOGE("%s: %d value is error %d\n",__func__,__LINE__,s32Ret);
+        return XBH_FAILURE;
+    }
+    *u32Value = s32Ret;
+    XLOGI("%s: %d get Contrast = %d\n",__func__,__LINE__,*u32Value);
+    return XBH_SUCCESS;
+}
+
+XBH_S32 XbhAmlogic_311d2::setBrightness(XBH_U32 u32Value)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    if(u32Value < 0 || u32Value > 100)
+    {
+        XLOGE("%s: %d param error\n",__func__,__LINE__);
+        return s32Ret;
+    }
+    return mSystemControlClient->setBrightness(u32Value, 1) >= 0 ? XBH_SUCCESS : XBH_FAILURE;
+}
+
+XBH_S32 XbhAmlogic_311d2::getBrightness(XBH_U32 *u32Value)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    s32Ret = mSystemControlClient->getBrightness();
+    if(s32Ret < 0 || s32Ret > 100)
+    {
+        XLOGE("%s: %d value is error %d\n",__func__,__LINE__,s32Ret);
+        return XBH_FAILURE;
+    }
+    *u32Value = s32Ret;
+    XLOGI("%s: %d get brightness = %d\n",__func__,__LINE__,*u32Value);
+    return XBH_SUCCESS;
+}
+
+XBH_S32 XbhAmlogic_311d2::setHue(XBH_U32 u32Value)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    if(u32Value < 0 || u32Value > 100)
+    {
+        XLOGE("%s: %d param error\n",__func__,__LINE__);
+        return s32Ret;
+    }
+    return mSystemControlClient->setHue(u32Value, 1) >= 0 ? XBH_SUCCESS : XBH_FAILURE;
+}
+XBH_S32 XbhAmlogic_311d2::getHue(XBH_U32 *u32Value)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    s32Ret = mSystemControlClient->getHue();
+    if(s32Ret < 0 || s32Ret > 100)
+    {
+        XLOGE("%s: %d value is error %d\n",__func__,__LINE__,s32Ret);
+        return XBH_FAILURE;
+    }
+    *u32Value = s32Ret;
+    XLOGI("%s: %d get hue = %d\n",__func__,__LINE__,*u32Value);
+    return XBH_SUCCESS;
+}
+
+XBH_S32 XbhAmlogic_311d2::setSharpness(XBH_U32 u32Value)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    if(u32Value < 0 || u32Value > 100)
+    {
+        XLOGE("%s: %d param error\n",__func__,__LINE__);
+        return s32Ret;
+    }
+    return mSystemControlClient->setSharpness(u32Value, 1/*unused*/, 1) >= 0 ? XBH_SUCCESS : XBH_FAILURE;
+}
+
+XBH_S32 XbhAmlogic_311d2::getSharpness(XBH_U32 *u32Value)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    s32Ret = mSystemControlClient->getSharpness();
+    if(s32Ret < 0 || s32Ret > 100)
+    {
+        XLOGE("%s: %d value is error %d\n",__func__,__LINE__,s32Ret);
+        return XBH_FAILURE;
+    }
+    *u32Value = s32Ret;
+    XLOGI("%s: %d get Sharpness = %d\n",__func__,__LINE__,*u32Value);
+    return XBH_SUCCESS;
+}
+
+XBH_S32 XbhAmlogic_311d2::setSaturation(XBH_U32 u32Value)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    if(u32Value < 0 || u32Value > 100)
+    {
+        XLOGE("%s: %d param error\n",__func__,__LINE__);
+        return s32Ret;
+    }
+    return mSystemControlClient->setSaturation(u32Value, 1) >= 0 ? XBH_SUCCESS : XBH_FAILURE;
+}
+
+XBH_S32 XbhAmlogic_311d2::getSaturation(XBH_U32 *u32Value)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    s32Ret = mSystemControlClient->getSaturation();
+    if(s32Ret < 0 || s32Ret > 100)
+    {
+        XLOGE(" %s: %d value is error %d\n",__func__,__LINE__,s32Ret);
+        return XBH_FAILURE;
+    }
+    *u32Value = s32Ret;
+    XLOGI(" %s: %d get Saturation = %d\n",__func__,__LINE__,*u32Value);
+    return XBH_SUCCESS;
+}
+
+XBH_S32 XbhAmlogic_311d2::getHallSensorValue(XBH_S32 *u32Value)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    return s32Ret;
+}
+
+XBH_S32 XbhAmlogic_311d2::getArcDetectStatus(XBH_BOOL* status)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    return s32Ret;
+}
+
+XBH_S32 XbhAmlogic_311d2::ProcessTypeBHotplug(XBH_SOURCE_E src)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    return s32Ret;
+}
+
+XBH_S32 XbhAmlogic_311d2::ProcessTypeCHotplug(XBH_SOURCE_E src)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    return s32Ret;
+}
+
+XBH_S32 XbhAmlogic_311d2::setWatchDogManualModeEnable(XBH_BOOL bEnable)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    return s32Ret;
+}
+
+XBH_S32 XbhAmlogic_311d2::getWatchDogManualModeEnable(XBH_BOOL *bEnable)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    return s32Ret;
+}
+
+XBH_S32 XbhAmlogic_311d2::getEthPlugStatus(XBH_BOOL* bEnable)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    return s32Ret;
+}
+
+XBH_S32 XbhAmlogic_311d2::setMcuFattMode(XBH_S32 mode)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    s32Ret = XbhMcuManager::getInstance()->setMcuFattMode(mode);
+    XLOGW("setMcuFattMode s32Ret = %d", s32Ret);
+    return s32Ret;
+}
+
+XBH_S32 XbhAmlogic_311d2::getMcuFattMode(XBH_S32 *mode)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    s32Ret = XbhMcuManager::getInstance()->getMcuFattMode(mode);
+    XLOGW("getMcuFattMode s32Ret = %d", s32Ret);
+    return s32Ret;
+}
+
+XBH_S32 XbhAmlogic_311d2::setMcuIIcBypass(XBH_U8 u8IIcNum, XBH_U8 u8DeviceAddr, XBH_U8 u8RegAddr, XBH_U8 u8Len, XBH_U8* u8Data)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    s32Ret = XbhMcuManager::getInstance()->setMcuIIcBypass(u8IIcNum, u8DeviceAddr, u8RegAddr, u8Len, u8Data);
+    return s32Ret;
+}
+
+XBH_S32 XbhAmlogic_311d2::getMcuIIcBypass(XBH_U8 u8IIcNum, XBH_U8 u8DeviceAddr, XBH_U8 u8RegAddr, XBH_U8 u8Len, XBH_U8* u8Data)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    s32Ret = XbhMcuManager::getInstance()->getMcuIIcBypass(u8IIcNum, u8DeviceAddr, u8RegAddr, u8Len, u8Data);
+    return s32Ret;
+}
+
+XBH_S32 XbhAmlogic_311d2::readAndUpdateEdidBinFileByEdidType(int dev, const char* edidBinFilePath, int port)
+{
+    // ==================== 第一部分：读取二进制文件 ====================
+    FILE *src_file = nullptr;
+    unsigned char *file_buffer = nullptr; // 使用无符号类型便于十六进制打印
+    // 打开源文件
+    if (!(src_file = fopen(edidBinFilePath, "rb")))
+    {
+        XLOGD("打开源文件失败");
+        return EXIT_FAILURE;
+    }
+    // 获取文件大小
+    struct stat file_stat;
+    if (fstat(fileno(src_file), &file_stat) == -1)
+    {
+        XLOGD("获取文件大小失败");
+        fclose(src_file);
+        return EXIT_FAILURE;
+    }
+    const size_t file_size = file_stat.st_size;
+    // 分配内存缓冲区
+    if (!(file_buffer = static_cast<unsigned char*>(malloc(file_size))))
+    {
+        XLOGD("内存分配失败");
+        fclose(src_file);
+        return EXIT_FAILURE;
+    }
+    // 读取文件内容
+    if (fread(file_buffer, 1, file_size, src_file) != file_size)
+    {
+        XLOGD("文件读取不完整");
+        free(file_buffer);
+        fclose(src_file);
+        return EXIT_FAILURE;
+    }
+    fclose(src_file);
+    // ==================== 数据打印模块 ====================
+    // for (size_t i = 0; i < file_size; ++i) {
+    //     // 每16字节换行
+    //     if ( (i+1) % 16 == 0) {
+    //         XLOGD("i=%d,file_buffer[i]=%02X", i,file_buffer[i]);
+    //     }
+    // }
+
+    // ==================== 第二部分：更新EDID ====================
+    switch(dev)
+    {
+
+        case XBH_UPDATE_MS9282:
+            XbhVgaEdidManager::getInstance()->setVgaEdidData(file_buffer, XBH_SOURCE_VGA1);
+            break;
+            default:
+            break;
+    }
+    // ==================== 资源清理 ====================
+    usleep(10*1000);
+    //free(file_buffer);
+    return EXIT_SUCCESS;
+}
 
 XbhAmlogic_311d2::XbhAmlogic_311d2()
 {
@@ -2290,7 +3011,7 @@ XbhAmlogic_311d2::XbhAmlogic_311d2()
     mRtcId = wall_clock_rtc();
 
     initSerialPort();
-
+    handleLicenseFileMissing();
     if (property_get_bool(XBH_CUST_PROPERTY_NOT_INIT, true))
     {
         property_set(XBH_CUST_PROPERTY_NOT_INIT, "false");

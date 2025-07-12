@@ -11141,7 +11141,7 @@ void It6265::run(const void* arg)
             case STEP_READY:
                 if ( it6265_is_device_ready() ) {
                     XLOGD("it6265 is ready");
-                    property_set("sys.xbh.ite6265.enable", "true");
+                    property_set("vendor.xbh.ite6265.enable", "true");
                     m_step = STEP_INIT;
                 }
                 else

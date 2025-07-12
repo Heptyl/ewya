@@ -82,6 +82,11 @@ public:
      */
     XBH_S32 setTypecReset(XBH_S32 devType);
 
+    /**
+     * get type-c Forward and Reverse Insertion Det
+     */
+     XBH_S32 getUSBCForwardReverseInsertionDet(XBH_S32 devType,XBH_S32 *u32Value);
+
     ~XbhHdmiSwitchManager();
 
 private:

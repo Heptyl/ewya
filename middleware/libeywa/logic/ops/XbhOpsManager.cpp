@@ -9,6 +9,7 @@
 #include "XbhService.h"
 #include "XbhUsbc2HdmiManager.h"
 #include "XbhHdmiSwitchManager.h"
+#include "XbhPdIcManager.h"
 XbhOpsManager*       XbhOpsManager::mInstance = NULL;
 XbhMutex             XbhOpsManager::mLock;
 
@@ -30,6 +31,17 @@ void XbhOpsManager::run(const void* arg)
             dynamicallyAdjustPower();
         }
     }
+    XBH_BOOL enable_rst5450 = property_get_bool("persist.vendor.xbh.dynadjpow_rst5450", false);
+    if(enable_rst5450)
+    {
+        XBH_BOOL powerenable_rst5450 = XBH_FALSE;
+        XbhPdIcManager::getInstance()->getChipInitDone(&powerenable_rst5450);
+        if(powerenable_rst5450)
+        {
+            dynamicallyAdjustPower();
+        }
+    }
+
     //ops模块插拔
     processOpsPlug();
     //ops开关机事件上报
@@ -347,6 +359,7 @@ XBH_S32 XbhOpsManager::processOpsPlug()
         SRCId = XBH_SOURCE_E::XBH_SOURCE_OPS1;
         if(!status)
         {
+            property_set("vendor.xbh.ops1crc.result", "0");
             MsgPublisher().PostMsg(XBH_OPS_DEV_PLUGOUT, &SRCId, sizeof(SRCId));
             //拔掉OPS后立即断掉OPS的供电
             XbhService::getPlatformInterface()->setOpsPowerEnable(XBH_FALSE, XBH_SOURCE_E::XBH_SOURCE_OPS1);
@@ -373,6 +386,7 @@ XBH_S32 XbhOpsManager::processOpsPlug()
         SRCId = XBH_SOURCE_E::XBH_SOURCE_OPS2;
         if(!status)
         {
+            property_set("vendor.xbh.ops2crc.result", "0");
             MsgPublisher().PostMsg(XBH_OPS_DEV_PLUGOUT, &SRCId, sizeof(SRCId));
             //拔掉OPS后立即断掉OPS的供电
             XbhService::getPlatformInterface()->setOpsPowerEnable(XBH_FALSE, XBH_SOURCE_E::XBH_SOURCE_OPS2);
@@ -454,6 +468,7 @@ XBH_S32 XbhOpsManager::processOpsStart()
 {
     XBH_BOOL bIsDet = XBH_FALSE;
     XBH_BOOL edidIsOk = XBH_FALSE;
+    XBH_BOOL power_status = XBH_FALSE;
 
     #if 1
     //获取OPS SINK的EDID 的准备状态，开启OPS前需要EDID准备好，否则可能出现OPS开机后无法读取EDID，导致没有信号输出
@@ -477,8 +492,15 @@ XBH_S32 XbhOpsManager::processOpsStart()
             XbhService::getPlatformInterface()->setOpsPowerEnable(XBH_TRUE, XBH_SOURCE_E::XBH_SOURCE_OPS1);
             XBH_U32 time = property_get_int32("persist.vendor.xbh.ops_ps_on_delay.time", 2000);
             usleep(time * 1000);
-            //ops power on
-            XbhService::getPlatformInterface()->setOpsPowerCtrl(XBH_SOURCE_E::XBH_SOURCE_OPS1);
+            //读取OPS上电情况
+            XbhService::getPlatformInterface()->getOpsPowerStatus(&power_status, XBH_SOURCE_E::XBH_SOURCE_OPS1);
+            {
+                if (power_status == XBH_FALSE)    //如果OPS没有上电再拉PS_ON开机
+                {
+                    //ops1 power on
+                    XbhService::getPlatformInterface()->setOpsPowerCtrl(XBH_SOURCE_E::XBH_SOURCE_OPS1);
+                }
+            }
         }
     }
 
@@ -494,8 +516,15 @@ XBH_S32 XbhOpsManager::processOpsStart()
         {   //set power enable for ops (19V)
             XbhService::getPlatformInterface()->setOpsPowerEnable(XBH_TRUE, XBH_SOURCE_E::XBH_SOURCE_OPS2);
             usleep(2000*1000); /* sleep 2s */
-            //ops power on
-            XbhService::getPlatformInterface()->setOpsPowerCtrl(XBH_SOURCE_E::XBH_SOURCE_OPS2);
+            //读取OPS上电情况
+            XbhService::getPlatformInterface()->getOpsPowerStatus(&power_status, XBH_SOURCE_E::XBH_SOURCE_OPS2);
+            {
+                if (power_status == XBH_FALSE)    //如果OPS没有上电再拉PS_ON开机
+                {
+                    //ops2 power on
+                    XbhService::getPlatformInterface()->setOpsPowerCtrl(XBH_SOURCE_E::XBH_SOURCE_OPS2);
+                }
+            }
         }
     }
 
@@ -511,8 +540,15 @@ XBH_S32 XbhOpsManager::processOpsStart()
         {   //set power enable for sdm1 (19V)
             XbhService::getPlatformInterface()->setOpsPowerEnable(XBH_TRUE, XBH_SOURCE_E::XBH_SOURCE_SDM1);
             usleep(2000*1000); /* sleep 2s */
-            //sdm1 power on
-            XbhService::getPlatformInterface()->setOpsPowerCtrl(XBH_SOURCE_E::XBH_SOURCE_SDM1);
+            //读取OPS上电情况
+            XbhService::getPlatformInterface()->getOpsPowerStatus(&power_status, XBH_SOURCE_E::XBH_SOURCE_SDM1);
+            {
+                if (power_status == XBH_FALSE)    //如果OPS没有上电再拉PS_ON开机
+                {
+                    //sdm1 power on
+                    XbhService::getPlatformInterface()->setOpsPowerCtrl(XBH_SOURCE_E::XBH_SOURCE_SDM1);
+                }
+            }
         }
     }
 
@@ -528,8 +564,15 @@ XBH_S32 XbhOpsManager::processOpsStart()
         {   //set power enable for sdm2 (19V)
             XbhService::getPlatformInterface()->setOpsPowerEnable(XBH_TRUE, XBH_SOURCE_E::XBH_SOURCE_SDM2);
             usleep(2000*1000); /* sleep 2s */
-            //sdm2 power on
-            XbhService::getPlatformInterface()->setOpsPowerCtrl(XBH_SOURCE_E::XBH_SOURCE_SDM2);
+            //读取OPS上电情况
+            XbhService::getPlatformInterface()->getOpsPowerStatus(&power_status, XBH_SOURCE_E::XBH_SOURCE_SDM2);
+            {
+                if (power_status == XBH_FALSE)    //如果OPS没有上电再拉PS_ON开机
+                {
+                    //sdm2 power on
+                    XbhService::getPlatformInterface()->setOpsPowerCtrl(XBH_SOURCE_E::XBH_SOURCE_SDM2);
+                }
+            }
         }
     }
     s32OpsStartCompleted = 1;
@@ -575,6 +618,10 @@ XBH_S32 XbhOpsManager::processOpsStatusReport()
                         if(mCurrPowerState[i] != mPrePowerState[i])
                         {
                             mPrePowerState[i] = XBH_FALSE;
+                            if (i == XBH_SOURCE_OPS1)
+                                property_set("vendor.xbh.ops1crc.result", "0");
+                            else if (i == XBH_SOURCE_OPS2)
+                                property_set("vendor.xbh.ops2crc.result", "0");
                             XLOGD(" %d is power off !! ", SRCId);
                             MsgPublisher().PostMsg(XBH_OPS_DEV_POWEROFF, &SRCId, sizeof(SRCId));
                         }
@@ -588,12 +635,39 @@ XBH_S32 XbhOpsManager::processOpsStatusReport()
     return XBH_SUCCESS;
 }
 
+//此处判断上电的时候是否插OPS，如果没有插入OPS再断OPS的电
+XBH_S32 XbhOpsManager::processFirstPowerOnOPS()
+{
+    XBH_BOOL firstStatus = XBH_FALSE;
+    for(int i = 0; i < XBH_SOURCE_BUTT; i ++)
+    {
+        switch (i)
+        {
+            case XBH_SOURCE_OPS1:
+            case XBH_SOURCE_OPS2:
+            case XBH_SOURCE_SDM1:
+            case XBH_SOURCE_SDM2:
+                firstStatus = XBH_FALSE;
+                XbhService::getPlatformInterface()->getOpsDetStatus(&firstStatus, (XBH_SOURCE_E)i);
+                if (firstStatus == XBH_FALSE)       //如果开机没插OPS，需要断电对应通道的OPS电源
+                {
+                    XbhService::getPlatformInterface()->setOpsPowerEnable(XBH_FALSE, (XBH_SOURCE_E)i);
+                }
+                break;
+            default:    //仅处理OPS源，其他的源不做处理
+                break;
+        }
+    }
+    return XBH_SUCCESS;
+}
+
 XbhOpsManager::XbhOpsManager()
 {
     XLOGD(" begin ");
+    //开启线程之前，先处理OPS上电逻辑：如果OPS没有插入，则需要关闭OPS的供电来确保通路正常；如果OPS插入，不需要做额外特殊处理。
+    processFirstPowerOnOPS();
     XbhMWThread::run(XbhMWThread::REPEAT);
     mSetCharging = XBH_TRUE;
-    XbhService::getPlatformInterface()->setOpsPowerEnable(XBH_FALSE, XBH_SOURCE_E::XBH_SOURCE_OPS1);
     XLOGD(" end ");
 }
 

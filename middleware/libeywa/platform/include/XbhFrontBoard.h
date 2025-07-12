@@ -35,6 +35,8 @@ public:
     XBH_S32 followToFHdmi1ExtAfter(XBH_VOID);
     XBH_S32 followToFHdmi2ExtBefore(XBH_VOID);
     XBH_S32 followToFHdmi2ExtAfter(XBH_VOID);
+    XBH_S32 followToFHdmi3ExtBefore(XBH_VOID);
+    XBH_S32 followToFHdmi3ExtAfter(XBH_VOID);
     ~XbhFrontBoard();
 
 private:

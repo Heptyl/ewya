@@ -32,7 +32,10 @@ public:
     * 根据OPS插入状态，动态设置PD功率
     */
     XBH_S32 setChargingPower(XBH_SOURCE_E src, XBH_PDCAPACITY_POWER data);
-
+    /**
+    * dataflow进行固件升级
+    */
+    XBH_S32 upgradeFirmwareByData(XBH_SOURCE_E src, XBH_U8 *data, XBH_U32 dataLen, XBH_BOOL bForceUpgrade);
 
 
     ~XbhUsbc2HdmiManager();

@@ -46,6 +46,16 @@ XBH_S32 XbhUsbc2HdmiInterface::upgradeFirmware(const XBH_CHAR* strFilePath, XBH_
 }
 
 /**
+    * dataflow进行固件升级
+*/
+XBH_S32 XbhUsbc2HdmiInterface::upgradeFirmwareByData(XBH_U8 *data, XBH_U32 dataLen, XBH_BOOL bForceUpgrade)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
  * 获取固件升级时的状态
  */
 XBH_S32 XbhUsbc2HdmiInterface::getUpgradeState(XBH_S32 * s32State)

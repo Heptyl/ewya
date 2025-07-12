@@ -194,6 +194,17 @@ XBH_S32 XbhHdmiSwitchManager::setTypecReset(XBH_S32 devType)
     return s32Ret;
 }
 
+XBH_S32 XbhHdmiSwitchManager::getUSBCForwardReverseInsertionDet(XBH_S32 devType,XBH_S32 *u32Value)
+{
+    XLOGD("getUSBCForwardReverseInsertionDet start !!!");
+    XBH_S32 s32Ret = XBH_SUCCESS;
+   if(m_pXbhHdmiSwitchTask != NULL)
+    {
+        s32Ret = m_pXbhHdmiSwitchTask->getUSBCForwardReverseInsertionDet(devType, u32Value);
+    }
+    return s32Ret;
+}
+
 void XbhHdmiSwitchManager::run(const void* arg)
 {
     XBH_U32 msgType;

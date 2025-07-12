@@ -23,7 +23,7 @@ XbhMutex                   XbhXMA311D2_X::mLock;
 
 #define RTK8367RB_VB_WOL_DEV            "/sys/devices/virtual/rtl8367/phy/wol"
 #define PHY_PORT_STATE_PATH             "/sys/class/rtl8367/phy/update_port_state"
-
+#define XBH_EEPROM_ADDR         0xA0   //eeprom的设备地址
 XbhXMA311D2_X::XbhXMA311D2_X()
 {
     XLOGD(" begin ");
@@ -318,6 +318,31 @@ XBH_S32 XbhXMA311D2_X::setMute(XBH_AUDIO_CHANNEL_E enAudioChannel, XBH_BOOL bEna
         default:
             break;
     }
+    return  s32Ret;
+}
+
+XBH_S32 XbhXMA311D2_X::getMute(XBH_AUDIO_CHANNEL_E enAudioChannel, XBH_BOOL* bEnable)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_U32 u32GpioValue;
+    switch(enAudioChannel)
+    {
+        case XBH_AUDIO_CHANNEL_SPEAKER:
+            s32Ret = XbhAudioAmplifierManager::getInstance()->getMute(XBH_AUDIO_CHANNEL_STEREO, bEnable);
+            break;
+        case XBH_AUDIO_CHANNEL_HEADPHONE:
+            s32Ret = XbhAudioCodecManager::getInstance()->getHeadphoneMute(bEnable);
+            break;
+        case XBH_AUDIO_CHANNEL_MIC:
+            s32Ret = XbhAudioCodecManager::getInstance()->getMuteMicIn(bEnable);
+            break;
+        case XBH_AUDIO_CHANNEL_SUBWOOFER:
+            s32Ret = XbhAudioAmplifierManager::getInstance()->getMute(XBH_AUDIO_CHANNEL_SUBWOOFER, bEnable);
+            break;
+        default:
+            break;
+    }
+    XLOGD("getMute channel = %d mute = %d ",enAudioChannel, *bEnable);
     return  s32Ret;
 }
 
@@ -758,6 +783,9 @@ XBH_S32 XbhXMA311D2_X::setOnStop()
 {
     XBH_S32 s32Ret = XBH_FAILURE;
     XBH_CHAR sWolStatus[PROPERTY_VALUE_MAX];
+    XBH_CHAR sNfcStatus[PROPERTY_VALUE_MAX];
+    XBH_CHAR sWosStatus[PROPERTY_VALUE_MAX];
+
     XBH_MCU_I2CBUFFDEF_S pI2cBuff;
     XLOGD("---- onStop ----");
     /*通知MCU SOC已待机*/
@@ -766,12 +794,26 @@ XBH_S32 XbhXMA311D2_X::setOnStop()
     pI2cBuff.data[0] = XBH_POWERMODE_STANDBY;
     s32Ret = setIICData(XBH_MCU_I2C_CHN, XBH_MCU_I2C_ADDR, pI2cBuff.cmd, 0x01, pI2cBuff.len, pI2cBuff.data);
 
+    property_get("persist.vendor.xbh.wos.enable", sWosStatus, "false");
+    if(strncmp(sWosStatus, "true",4) == 0) {
+        setWoTStatus(XBH_WAKEUP_SOURCE,XBH_TRUE);
+    } else {
+        setWoTStatus(XBH_WAKEUP_SOURCE,XBH_FALSE);
+    }
 
     property_get("persist.vendor.xbh.wol.enable", sWolStatus, "false");
     if(strncmp(sWolStatus, "true",4) == 0) {
         setWolEnable(XBH_TRUE);
     } else {
         setWolEnable(XBH_FALSE);
+    }
+    //关掉2075
+    setGpioOutputValue(XBH_BOARD_GPIO_GVS2705_PWR_CTRL, !XBH_BOARD_GPIO_GVS2705_PWR_CTRL_ON);
+    
+    property_get("persist.vendor.xbh.nfc.enable", sNfcStatus, "false");
+    if(strncmp(sNfcStatus, "false", 5) == 0){
+        setGpioOutputValue(XBH_BOARD_GPIOD_11, !XBH_BOARD_MCU_GPIO_NFCVEN_ON);
+        setGpioOutputValue(XBH_BOARD_MCU_GPIO_NFCVEN, !XBH_BOARD_MCU_GPIO_NFCVEN_ON);
     }
 
     return  s32Ret;
@@ -932,7 +974,7 @@ XBH_S32 XbhXMA311D2_X::setVgaEdidI2cData(XBH_U32 u32RegAddr, const XBH_U8* u8Dat
 {
     XBH_S32 s32Ret = XBH_FAILURE;
 
-    I2CSimulator* pSimulator = I2CSimulator::getInstance(XBH_BOARD_GPIO_VGA_EEPROM_SDA, XBH_BOARD_GPIO_VGA_EEPROM_SCL);
+    I2CSimulator* pSimulator = I2CSimulator::getInstance(XBH_BOARD_GPIO_VGA_EEPROM_SDA, XBH_BOARD_GPIO_VGA_EEPROM_SCL, XBH_EEPROM_ADDR);
     if (pSimulator == nullptr) {
         XLOGD("Failed to create I2CSimulator instance\n");
         return XBH_FAILURE;
@@ -947,7 +989,7 @@ XBH_S32 XbhXMA311D2_X::getVgaEdidI2cData(XBH_U32 u32RegAddr, XBH_U8* u8Data, XBH
 {
     XBH_S32 s32Ret = XBH_FAILURE;
 
-    I2CSimulator* pSimulator = I2CSimulator::getInstance(XBH_BOARD_GPIO_VGA_EEPROM_SDA, XBH_BOARD_GPIO_VGA_EEPROM_SCL);
+    I2CSimulator* pSimulator = I2CSimulator::getInstance(XBH_BOARD_GPIO_VGA_EEPROM_SDA, XBH_BOARD_GPIO_VGA_EEPROM_SCL, XBH_EEPROM_ADDR);
     if (pSimulator == nullptr) {
         XLOGD("Failed to create I2CSimulator instance\n");
         return XBH_FAILURE;

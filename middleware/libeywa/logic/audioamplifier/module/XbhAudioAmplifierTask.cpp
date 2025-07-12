@@ -436,6 +436,38 @@ XBH_S32 XbhAudioAmplifierTask::getEqEnable(XBH_BOOL* bEnable)
 }
 
 /**
+* 设置音频输出的前置增益
+* param[in] enEqMode. EQ阶段
+* param[out] s32Value. 增益值
+* retval 0:success,-1:failure
+*/
+XBH_S32 XbhAudioAmplifierTask::setAudioEq(XBH_EQ_MODE_E enEqMode, XBH_S32 s32Value)
+{   
+    XBH_S32 s32Ret = XBH_FAILURE;
+    if(m_pXbhAudioAmplifierInterface[0] != NULL)
+    {
+        s32Ret = m_pXbhAudioAmplifierInterface[0]->setAudioEq(enEqMode, s32Value);
+    }
+    return  s32Ret;
+}
+
+/**
+* 获取音频输出的前置增益
+* param[in] enEqMode. EQ阶段
+* param[out] s32Value. 增益值
+* retval 0:success,-1:failure
+*/
+XBH_S32 XbhAudioAmplifierTask::getAudioEq(XBH_EQ_MODE_E enEqMode, XBH_S32* s32Value)
+{   
+    XBH_S32 s32Ret = XBH_FAILURE;
+    if(m_pXbhAudioAmplifierInterface[0] != NULL)
+    {
+        s32Ret = m_pXbhAudioAmplifierInterface[0]->getAudioEq(enEqMode, s32Value);
+    }
+    return  s32Ret;
+}
+
+/**
 * 设置低音增益
 * param[in] s32Value 增益值
 * retval 0:success,-1:failure

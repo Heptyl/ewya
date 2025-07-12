@@ -20,4 +20,5 @@ PRODUCT_PACKAGES += \
     libzyuarttouch \
     libxbhuarttouch \
     libycluarttouch \
-    libistguarttouch
+    libistguarttouch \
+    libtimelinkh3touch

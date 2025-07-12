@@ -191,6 +191,45 @@ XBH_S32 XbhPartitionData::getMacAddress(XBH_CHAR* strMacAddress)
     return XBH_SUCCESS;
 }
 
+//将授权成功的response文件保存到不可擦除分区
+XBH_S32 XbhPartitionData::setMicLicResponse(const XBH_CHAR* strResponse)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    XBH_CHAR s8Buff[XBH_CUSDATA_MIC_LIC_RESPONSE_LEN] = {0};
+    memset(s8Buff, 0, sizeof(s8Buff));
+    XBH_S32 s32Len = XBH_CUSDATA_MIC_LIC_RESPONSE_LEN - 1;
+    if (strlen(strResponse) < s32Len)
+    {
+        s32Len = strlen(strResponse);
+    }
+    strncpy(s8Buff, strResponse, s32Len);
+    s8Buff[s32Len] = '\0';
+    XLOGD("setMicLicResponse: %s\n", s8Buff);
+    s32Ret = writeDataToCusdata(XBH_CUSDATA_MIC_LIC_RESPONSE_OFFSET, XBH_CUSDATA_MIC_LIC_RESPONSE_LEN, (XBH_VOID *)s8Buff);
+
+    return  s32Ret;
+}
+
+//从不可擦除分区读取授权成功的response文件
+XBH_S32 XbhPartitionData::getMicLicResponse(XBH_CHAR* strResponse)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    XBH_CHAR s8Buff[XBH_CUSDATA_MIC_LIC_RESPONSE_LEN] = {0};
+    XBH_S32 i = 0;
+    s32Ret = readDataFromCusdata(XBH_CUSDATA_MIC_LIC_RESPONSE_OFFSET, XBH_CUSDATA_MIC_LIC_RESPONSE_LEN, (XBH_VOID *)s8Buff);
+
+    if (strlen(s8Buff) > 0)
+    {
+        memcpy(strResponse, s8Buff, strlen(s8Buff));
+    }
+    else
+    {
+        memcpy(strResponse, "0", strlen("0"));
+    }
+    XLOGD("getMicLicResponse: %s\n", strResponse);
+    return  s32Ret;
+}
+
 /**
  * 写入Project ID
  * param[in] value Project ID
@@ -267,6 +306,48 @@ XBH_S32 XbhPartitionData::getColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN
     XBH_GAIN_OFFSET_DATA_S colorTempValue[XBH_COLORTEMP_BUTT];
     memset(colorTempValue, 0, sizeof(colorTempValue));
     s32Ret = readDataFromCusdata(XBH_CUSDATA_COLORTEMP_DATA_OFFSET, XBH_CUSDATA_COLORTEMP_DATA_LEN, (XBH_CHAR *)colorTempValue);
+
+    if (s32Ret == XBH_SUCCESS) 
+    {
+        memcpy(data, colorTempValue + enColorTemp, sizeof(XBH_GAIN_OFFSET_DATA_S));
+    }
+    else
+    {
+        return XBH_FAILURE;
+    }
+
+    return  s32Ret;
+}
+
+/**
+ * 设置android对应模式的具体色温数据
+ * param[in] enColorTemp. 色温模式
+ * param[in] data. 色温参数
+ * retval 0:success,-1:failure
+*/
+XBH_S32 XbhPartitionData::setAndroidColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_GAIN_OFFSET_DATA_S colorTempValue[XBH_COLORTEMP_BUTT];
+    memset(colorTempValue, 0, sizeof(colorTempValue));
+    s32Ret = readDataFromCusdata(XBH_CUSDATA_ANDROID_COLORTEMP_DATA_OFFSET, XBH_CUSDATA_ANDROID_COLORTEMP_DATA_LEN, (XBH_CHAR *)colorTempValue);
+    memcpy(colorTempValue + enColorTemp, data, sizeof(XBH_GAIN_OFFSET_DATA_S));
+    s32Ret = writeDataToCusdata(XBH_CUSDATA_ANDROID_COLORTEMP_DATA_OFFSET, XBH_CUSDATA_ANDROID_COLORTEMP_DATA_LEN, (XBH_CHAR *)colorTempValue);
+    return  s32Ret;
+}
+
+/**
+ * 获取android对应模式的具体色温数据
+ * param[in] enColorTemp. 色温模式
+ * param[out] data. 色温参数
+ * retval 0:success,-1:failure
+*/
+XBH_S32 XbhPartitionData::getAndroidColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_GAIN_OFFSET_DATA_S colorTempValue[XBH_COLORTEMP_BUTT];
+    memset(colorTempValue, 0, sizeof(colorTempValue));
+    s32Ret = readDataFromCusdata(XBH_CUSDATA_ANDROID_COLORTEMP_DATA_OFFSET, XBH_CUSDATA_ANDROID_COLORTEMP_DATA_LEN, (XBH_CHAR *)colorTempValue);
 
     if (s32Ret == XBH_SUCCESS) 
     {
@@ -553,6 +634,50 @@ XBH_S32 XbhPartitionData::getRkpStatus(XBH_CHAR* data)
     return s32Ret;
 }
 
+//Set huawei production information
+XBH_S32 XbhPartitionData::setCustProductInfo(const XBH_CHAR* pBuff)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    XBH_CHAR s8Buff[XBH_CUSDATA_HUAWEI_PRODUCTION_INFORMATION_LEN] = {0};
+    memset(s8Buff, 0, sizeof(s8Buff));
+    XBH_S32 s32Len = XBH_CUSDATA_HUAWEI_PRODUCTION_INFORMATION_LEN - 1;
+    if (strlen(pBuff)  < s32Len)
+    {
+        s32Len = strlen(pBuff);
+    }
+    XLOGD("setCustProductInfo: %d\n", s32Len);
+    strncpy(s8Buff, pBuff, s32Len);
+    s8Buff[s32Len] = '\0';
+    XLOGD("setCustProductInfo: %s\n", s8Buff);
+    s32Ret = writeDataToCusdata(XBH_CUSDATA_HUAWEI_PRODUCTION_INFORMATION_OFFSET, XBH_CUSDATA_HUAWEI_PRODUCTION_INFORMATION_LEN, (XBH_VOID *)s8Buff);
+
+    return  s32Ret;
+}
+
+//Get huawei production information
+XBH_S32 XbhPartitionData::getCustProductInfo(XBH_CHAR* pBuff)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    XBH_CHAR s8Buff[XBH_CUSDATA_HUAWEI_PRODUCTION_INFORMATION_LEN] = {0};
+
+    s32Ret = readDataFromCusdata(XBH_CUSDATA_HUAWEI_PRODUCTION_INFORMATION_OFFSET, XBH_CUSDATA_HUAWEI_PRODUCTION_INFORMATION_LEN, (XBH_VOID *)s8Buff);
+    // confirm production information len
+    for (int i = 0; i < XBH_CUSDATA_HUAWEI_PRODUCTION_INFORMATION_LEN-1; i++)
+    {
+        
+        pBuff[i] = s8Buff[i];
+       
+        if (pBuff[i] == '\0')
+        {
+            break;
+        }
+    }
+    
+    XLOGD("getCustProductInfo: %s\n", pBuff);
+
+    return  XBH_SUCCESS;
+}
+
 //set pn data smart的需求
 XBH_S32 XbhPartitionData::setSmartPnData(const XBH_CHAR* data)
 {
@@ -701,16 +826,19 @@ XBH_S32 XbhPartitionData::saveFactoryMac(XBH_MAC_ADDRESS_TYPE macType,const XBH_
             break;
         case XBH_TYPEC_2:
             s32Ret = writeDataToCusdata(XBH_CUSDATA_TPYEC_MAC_ADDRESS_OFFSET_2, XBH_CUSDATA_TPYEC_MAC_ADDRESS_LEN_2, (XBH_VOID *)strMacAddress);
-            break;    
+            break;
         case XBH_OPS_1:
-             s32Ret = writeDataToCusdata(XBH_CUSDATA_OPS_MAC_ADDRESS_OFFSET, XBH_CUSDATA_OPS_MAC_ADDRESS_LEN, (XBH_VOID *)strMacAddress);
-             break;      
+            s32Ret = writeDataToCusdata(XBH_CUSDATA_OPS_MAC_ADDRESS_OFFSET, XBH_CUSDATA_OPS_MAC_ADDRESS_LEN, (XBH_VOID *)strMacAddress);
+            break;
         case XBH_OPS_2:
-             s32Ret = writeDataToCusdata(XBH_CUSDATA_OPS_MAC_ADDRESS_OFFSET_2, XBH_CUSDATA_OPS_MAC_ADDRESS_LEN_2, (XBH_VOID *)strMacAddress);
-             break;           
+            s32Ret = writeDataToCusdata(XBH_CUSDATA_OPS_MAC_ADDRESS_OFFSET_2, XBH_CUSDATA_OPS_MAC_ADDRESS_LEN_2, (XBH_VOID *)strMacAddress);
+            break;
+        case XBH_RNDIS:
+            s32Ret = writeDataToCusdata(XBH_CUSDATA_RNDIS_MAC_ADDRESS_OFFSET, XBH_CUSDATA_RNDIS_MAC_ADDRESS_LEN, (XBH_VOID *)strMacAddress);
+            break;
         default:
-             s32Ret = XBH_FAILURE;
-             break;
+            s32Ret = XBH_FAILURE;
+            break;
     }
   
     XLOGD("XBH_MAC_ADDRESS_TYPE: %d, setOpsMacAddress:%s, ret:%d", macType, strMacAddress, s32Ret);
@@ -731,16 +859,19 @@ XBH_S32 XbhPartitionData::getFactoryMac(XBH_MAC_ADDRESS_TYPE macType,XBH_CHAR* s
             break;
         case XBH_TYPEC_2:
             s32Ret = readDataFromCusdata(XBH_CUSDATA_TPYEC_MAC_ADDRESS_OFFSET_2, XBH_CUSDATA_TPYEC_MAC_ADDRESS_LEN_2, (XBH_VOID *)strMacAddress);
-            break;    
+            break;
         case XBH_OPS_1:
-             s32Ret = readDataFromCusdata(XBH_CUSDATA_OPS_MAC_ADDRESS_OFFSET, XBH_CUSDATA_OPS_MAC_ADDRESS_LEN, (XBH_VOID *)strMacAddress);
-             break;      
+            s32Ret = readDataFromCusdata(XBH_CUSDATA_OPS_MAC_ADDRESS_OFFSET, XBH_CUSDATA_OPS_MAC_ADDRESS_LEN, (XBH_VOID *)strMacAddress);
+            break;
         case XBH_OPS_2:
-             s32Ret = readDataFromCusdata(XBH_CUSDATA_OPS_MAC_ADDRESS_OFFSET_2, XBH_CUSDATA_OPS_MAC_ADDRESS_LEN_2, (XBH_VOID *)strMacAddress);
-             break;           
+            s32Ret = readDataFromCusdata(XBH_CUSDATA_OPS_MAC_ADDRESS_OFFSET_2, XBH_CUSDATA_OPS_MAC_ADDRESS_LEN_2, (XBH_VOID *)strMacAddress);
+            break;
+        case XBH_RNDIS:
+            s32Ret = readDataFromCusdata(XBH_CUSDATA_RNDIS_MAC_ADDRESS_OFFSET, XBH_CUSDATA_RNDIS_MAC_ADDRESS_LEN, (XBH_VOID *)strMacAddress);
+            break;
         default:
-             s32Ret = XBH_FAILURE;
-             break;  
+            s32Ret = XBH_FAILURE;
+            break;
     }
    
     if (s32Ret != XBH_SUCCESS)
@@ -1106,6 +1237,103 @@ XBH_S32 XbhPartitionData::getMonitorId(std::string& monitorId)
     return s32Ret;
 }
 
+/**
+* 将RTC数据保存到不可擦除分区
+*/
+XBH_S32 XbhPartitionData::setReferRTCInfo(const XBH_CHAR* pBuff)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    XBH_CHAR s8Buff[XBH_CUSDATA_BOE_RTC_TEST_INFORMATION_LEN] = {0};
+    memset(s8Buff, 0, sizeof(s8Buff));
+    XBH_S32 s32Len = XBH_CUSDATA_BOE_RTC_TEST_INFORMATION_LEN - 1;
+    if (strlen(pBuff)  < s32Len)
+    {
+        s32Len = strlen(pBuff);
+    }
+    XLOGD("setReferRTCInfo: %d\n", s32Len);
+    strncpy(s8Buff, pBuff, s32Len);
+    s8Buff[s32Len] = '\0';
+    XLOGD("setReferRTCInfo: %s\n", s8Buff);
+    s32Ret = writeDataToCusdata(XBH_CUSDATA_BOE_RTC_TEST_INFORMATION_OFFSET, XBH_CUSDATA_BOE_RTC_TEST_INFORMATION_LEN, (XBH_VOID *)s8Buff);
+
+    return  s32Ret;
+}
+
+/**
+* 从不可擦除分区读取RTC数据
+*/
+XBH_S32 XbhPartitionData::getReferRTCInfo(XBH_CHAR* pBuff)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    XBH_CHAR s8Buff[XBH_CUSDATA_BOE_RTC_TEST_INFORMATION_LEN] = {0};
+
+    s32Ret = readDataFromCusdata(XBH_CUSDATA_BOE_RTC_TEST_INFORMATION_OFFSET, XBH_CUSDATA_BOE_RTC_TEST_INFORMATION_LEN, (XBH_VOID *)s8Buff);
+    // confirm RTC information len
+    for (int i = 0; i < XBH_CUSDATA_BOE_RTC_TEST_INFORMATION_LEN-1; i++)
+    {
+        
+        pBuff[i] = s8Buff[i];
+       
+        if (pBuff[i] == '\0')
+        {
+            break;
+        }
+    }
+    
+    XLOGD("getReferRTCInfo: %s\n", pBuff);
+
+    return  XBH_SUCCESS;
+}
+
+/**
+ * 设置图像的gamma，一般预置3组gamma
+ * param[in] u32Value. gamma组的序号
+ * retval 0:success,-1:failure
+*/
+XBH_S32 XbhPartitionData::setGammaGroup(XBH_VOID * pBuff)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    s32Ret = writeDataToCusdata(XBH_CUSDATA_BOE_GAMMA_VALUE_OFFSET, XBH_CUSDATA_BOE_GAMMA_VALUE_LEN, pBuff);
+    return s32Ret;
+}
+
+/**
+ * 获取图像的gamma组的序号
+ * param[out] u32Value. gamma组的序号
+ * retval 0:success,-1:failure
+*/
+XBH_S32 XbhPartitionData::getGammaGroup(XBH_VOID * pBuff)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    s32Ret = readDataFromCusdata(XBH_CUSDATA_BOE_GAMMA_VALUE_OFFSET, XBH_CUSDATA_BOE_GAMMA_VALUE_LEN, pBuff);
+    return s32Ret;
+}
+
+/**
+ * 设置主固件升级标志位
+ * param[in] u32Value. gamma组的序号
+ * retval 0:success,-1:failure
+*/
+XBH_S32 XbhPartitionData::setUpgradeSystemFlag(XBH_VOID * pBuff)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    s32Ret = setCusParamValue(XBH_CUSPARAM_FROCE_UPGRADE_FLAG_OFFSET, XBH_CUSPARAM_FROCE_UPGRADE_FLAG_LEN, pBuff);
+    return s32Ret;
+}
+
+/**
+ * 获取主固件升级标志位
+ * param[out] u32Value. gamma组的序号
+ * retval 0:success,-1:failure
+*/
+XBH_S32 XbhPartitionData::getUpgradeSystemFlag(XBH_VOID * pBuff)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    s32Ret = getCusParamValue(XBH_CUSPARAM_FROCE_UPGRADE_FLAG_OFFSET, XBH_CUSPARAM_FROCE_UPGRADE_FLAG_LEN, pBuff);
+    return s32Ret;
+}
+
+//public    
 XBH_S32 XbhPartitionData::writeDataToCusdata(XBH_U32 offset, XBH_U32 u32Length, const XBH_VOID* data)
 {
     XBH_S32 s32Ret = XBH_SUCCESS;
@@ -1168,9 +1396,11 @@ XBH_S32 XbhPartitionData::readDataFromCusdata(XBH_U32 offset, XBH_U32 u32Length,
     }
     else
     {
-        XLOGE("check crc16 value fail.\n", u16FlashCrc16Value);
+        XLOGE("check crc16 value fail.\n");
         XLOGE("u16Crc16Value: 0x%x\n", u16Crc16Value);
         XLOGE("u16FlashCrc16Value: 0x%x\n", u16FlashCrc16Value);
+        #ifdef XBH_NO_NEED_CRC
+        XLOGW("===========>> rewrite crc data : 0x%x\n", u16FlashCrc16Value);
         //当CRC不匹配时，重新写入CRC值，兼容之前没有计算CRC的情况
         s32Ret = setCusDataValue(offset + u32Length, 2, (XBH_VOID *)&u16Crc16Value);
         if (s32Ret != XBH_SUCCESS)
@@ -1181,6 +1411,7 @@ XBH_S32 XbhPartitionData::readDataFromCusdata(XBH_U32 offset, XBH_U32 u32Length,
             return XBH_FAILURE;
         }
         memcpy(data, u8Buff, u32Length);
+        #endif
     }
     free(u8Buff);
     u8Buff = NULL;

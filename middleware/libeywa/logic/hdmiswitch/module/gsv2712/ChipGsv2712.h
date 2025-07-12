@@ -63,6 +63,7 @@
 #define REG_SPA_UPDATE_RXD    0xC0
 
 //I2C
+#define XBH_GSV2712_FORWARD_REVERSE_INSERTION       (0xFF0E)
 #define XBH_GSV2712_RXDDC_UPDCONFIGID               (0xFF22)
 #define XBH_GSV2712_RXDDC_UPDREPLYID                (0xFF27)
 #define XBH_GSV2712_RXDDC_REPLY                     (0xFF2B)
@@ -187,6 +188,9 @@ public:
     
     XBH_S32 setTypecReset(void);
 
+    XBH_S32 getUSBCForwardReverseInsertionDet(XBH_S32 *u32Value);
+
+    XBH_S32 setNormalMode(void);
 private:
     XBH_S32 mI2cNumber;
     XBH_S32 mI2cAddress;

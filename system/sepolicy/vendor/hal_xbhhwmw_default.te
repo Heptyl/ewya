@@ -27,3 +27,5 @@ allow hal_xbhhwmw_default hidraw_device:chr_file { read write open ioctl };
 allow hal_xbhhwmw_default vendor_data_file:file { open read write create getattr append };
 allow hal_xbhhwmw_default vendor_data_file:dir { add_name write open read };
 allow hal_xbhhwmw_default hdmirx_device:chr_file { ioctl open read write};
+allow hal_xbhhwmw_default proc:file { open read write getattr };
+allow hal_xbhhwmw_default sysfs_net:dir { search };

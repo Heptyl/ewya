@@ -172,6 +172,8 @@ public:
     XBH_S32 ProcessTypeBHotplug(XBH_SOURCE_E src);
     //override
     XBH_S32 ProcessTypeCHotplug(XBH_SOURCE_E src);
+    //override
+    XBH_S32 getKtcTouchInfo(XBH_CHAR* pBuff);
 private:
     XBH_S32 openEthWol(XBH_BOOL bEnable);
     XBH_BOOL isOTGMode(XBH_VOID);

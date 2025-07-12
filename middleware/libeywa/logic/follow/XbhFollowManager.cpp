@@ -5,6 +5,7 @@
 #include "XbhFollowManager.h"
 #include "XbhService.h"
 #include "XbhFrontBoard.h"
+#include "XbhSourceManager.h"
 
 #include <sys/types.h>
 #include <sys/stat.h>
@@ -51,7 +52,6 @@ void XbhFollowManager::run(const void* arg)
         {
             mCurrentSrc = mChangeToSrc;
             XLOGD(" XbhFollowManager  mChangeToSrc =  %d  \n", mChangeToSrc);
-            XbhService::getModuleInterface()->setTypecReset(mChangeToSrc);
             switch(mChangeToSrc) {
                 case XBH_SOURCE_ANDROID:
                     XbhFrontBoard::getInstance()->followToAndroidExtBefore();
@@ -99,7 +99,9 @@ void XbhFollowManager::run(const void* arg)
                     XbhFrontBoard::getInstance()->followToFHdmi2ExtAfter();
                     break;
                 case XBH_SOURCE_F_HDMI3:
+                    XbhFrontBoard::getInstance()->followToFHdmi3ExtBefore();
                     XbhService::getModuleInterface()->followToFHdmi3();
+                    XbhFrontBoard::getInstance()->followToFHdmi3ExtAfter();
                     break;
                 case XBH_SOURCE_F_HDMI4:
                     XbhService::getModuleInterface()->followToFHdmi4();
@@ -206,6 +208,7 @@ void XbhFollowManager::run(const void* arg)
                     XLOGE("error port !!!! mChangeToSrc = %d ", mChangeToSrc);
                     break;
             }
+            XbhSourceManager::getInstance()->setFollowPort(mCurrentSrc);  //告知XbhSourceManager
             //lango array MIC
             static XBH_BOOL bExtUac = XBH_FALSE;
             char prop[PROPERTY_VALUE_MAX];

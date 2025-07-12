@@ -223,3 +223,23 @@ XBH_S32 XbhAudioCodecInterface::getUpgradeState(XBH_S32 * s32State)
     XLOGW("this func is not implement");
     return  s32Ret;
 }
+
+/**
+* 设置line out在线切换模式
+ */
+XBH_S32 XbhAudioCodecInterface::setLineOutMode(XBH_LINEOUT_MODE_E enLineOutMode)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
+ * 获取line out当前模式
+ */
+XBH_S32 XbhAudioCodecInterface::getLineOutMode(XBH_LINEOUT_MODE_E* enLineOutMode)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}

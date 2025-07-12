@@ -3,6 +3,7 @@
 
 #include "XbhLog.h"
 #include "XbhPlatformInterface.h"
+#include "XbhPartitionData.h"
 
 /******************************************************************************PICTURE***********************************************************/
 /**
@@ -492,6 +493,59 @@ XBH_S32 XbhPlatformInterface::getColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_
     XLOGW("this func is not implement");
     return  s32Ret;
 }
+
+/**
+ * 设置对应模式的具体色温数据
+ * param[in] enColorTemp. 色温模式
+ * param[in] data. 色温参数
+ * retval 0:success,-1:failure
+*/
+XBH_S32 XbhPlatformInterface::setAndroidColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
+ * 获取对应模式的具体色温数据
+ * param[in] enColorTemp. 色温模式
+ * param[out] data. 色温参数
+ * retval 0:success,-1:failure
+*/
+XBH_S32 XbhPlatformInterface::getAndroidColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
+ * 保存对应模式的具体色温数据，保存到cusdata分区
+ * param[in] enColorTemp. 色温模式
+ * param[in] data. 色温参数
+ * retval 0:success,-1:failure
+*/
+XBH_S32 XbhPlatformInterface::saveColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
+ * 读取对应模式的具体色温数据，从cusdata分区读取
+ * param[in] enColorTemp. 色温模式
+ * param[out] data. 色温参数
+ * retval 0:success,-1:failure
+*/
+XBH_S32 XbhPlatformInterface::loadColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
 /******************************************************************************AUDIO***********************************************************/
 /**
  * 设置声音模式
@@ -725,7 +779,7 @@ XBH_S32 XbhPlatformInterface::setAudioEq(XBH_EQ_MODE_E enEqMode, XBH_S32 s32Valu
 }
 
 /**
- * 设置音频输出的前置增益
+ * 获取音频输出的前置增益
  * param[in] enEqMode. EQ阶段
  * param[out] s32Value. 增益值
  * retval 0:success,-1:failure
@@ -928,6 +982,19 @@ XBH_S32 XbhPlatformInterface::getAmpMode(XBH_S32* mode)
     XLOGW("this func is not implement");
     return  s32Ret;
 }
+
+/**
+ * 通过去读取lic_status去获取授权的状态
+ * param[out] 授权的状态
+ * retval 0:success,-1:failure
+*/
+XBH_S32 XbhPlatformInterface::getMicLicenseState(XBH_S32* status)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
 /******************************************************************************VGA***********************************************************/
 /**
  * 设置VGA的RGB采样的ADC自动校准值
@@ -1385,6 +1452,25 @@ XBH_S32 XbhPlatformInterface::getHdmiRxAudioSampleFreq(XBH_U32 *u32Data)
     XLOGW("this func is not implement");
     return  s32Ret;
 }
+/**
+* get hdmi rx edid invaild
+*/
+XBH_S32 XbhPlatformInterface::getEdidInvaild(XBH_HDMIRX_EDID_TYPE_E edidType, XBH_U8 *edidInvaild)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+/**
+* get hdmi rx audio locked status
+*/
+XBH_S32 XbhPlatformInterface::getHdmiRxAudioLocked(XBH_U32 *u32Data)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
 /******************************************************************************SYSTEM***********************************************************/
 /**
  * 获取唤醒源
@@ -1736,6 +1822,56 @@ std::string XbhPlatformInterface::getUsbDeviceInfos(const std::string& input)
     return "[]";
 }
 
+/**
+ * 设置故障检测的开关
+ * param[in] bEnable 检测开关
+ * param[in] u32DetectType 检测类型
+ * retval 0:success,-1:failure
+*/
+XBH_S32 XbhPlatformInterface::setErrorDetectState(XBH_BOOL bEnable, XBH_U32 u32DetectType)
+{
+    XBH_U32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
+ * 获取故障检测的开关
+ * param[out] bEnable 检测开关
+ * param[out] u32DetectType 检测类型
+ * retval 0:success,-1:failure
+*/
+XBH_S32 XbhPlatformInterface::getErrorDetectState(XBH_BOOL* bEnable, XBH_U32* u32DetectType)
+{
+    XBH_U32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
+ * 获取故障码
+ * param[out] u32ErrorCode
+ * retval 0:success,-1:failure
+*/
+XBH_S32 XbhPlatformInterface::getErrorCode(XBH_U32* u32ErrorCode)
+{
+    XBH_U32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
+ * 清除故障码
+ * retval 0:success,-1:failure
+*/
+XBH_S32 XbhPlatformInterface::clearErrorCode(void)
+{
+    XBH_U32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+
 /******************************************************************************FACTORY***********************************************************/
 /**
  * 设置当前信源画面的重显率数据
@@ -1940,6 +2076,7 @@ XBH_S32 XbhPlatformInterface::getDebugEnable(XBH_BOOL* bEnable)
  *          1 OPS
  *          2 SDM
  *          3 Usbc
+ *          4 RNDIS
  * param[in] strMacAddress 有线网的MAC地址
  * retval 0:success,-1:failure
 */
@@ -1957,6 +2094,7 @@ XBH_S32 XbhPlatformInterface::setMacAddress(XBH_S32 macType, const XBH_CHAR* str
  *          1 OPS
  *          2 SDM
  *          3 Usbc
+ *          4 RNDIS
  * param[out] strMacAddress 有线网的MAC地址
  * retval 0:success,-1:failure
 */
@@ -1985,6 +2123,67 @@ XBH_S32 XbhPlatformInterface::setSn(const XBH_CHAR* strSn)
  * retval 0:success,-1:failure
 */
 XBH_S32 XbhPlatformInterface::getSn(XBH_CHAR* strSn)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
+* 写入分区数据
+* param[in] pBuff 要写入的实际数据
+* retval 0:success,-1:failure
+*/
+XBH_S32 XbhPlatformInterface::setCustProductInfo(const XBH_CHAR* pBUff)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
+* 读取分区数据
+* param[in] pBuff 要读取的实际数据
+* retval 0:success,-1:failure
+*/
+XBH_S32 XbhPlatformInterface::getCustProductInfo(XBH_CHAR* pBUff)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+/**
+* 获取指定通道的唤醒引脚状态
+* param[in] enSource 要指定通道
+*param[out] bEnable 唤醒信号状态
+* retval 0:success,-1:failure
+*/
+XBH_S32 XbhPlatformInterface::getOpsWakeSoc(XBH_BOOL *bEnable, XBH_SOURCE_E enSource)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+ /**
+    * 获取指定通道的ops运行状态
+    * param[in] enSource 指定通道
+    *param[out] bEnable :ture 低电平,false 高电平
+    * retval 0:success,-1:failure
+    */
+XBH_S32 XbhPlatformInterface::getOpsOperationStatus(XBH_BOOL *bEnable, XBH_SOURCE_E enSource)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
+* 设置指定通道的recovery控制引脚电平
+* param[in] enSource 指定通道
+*param[in] bEnable :ture 低电平,false 高电平
+* retval 0:success,-1:failure
+*/
+XBH_S32 XbhPlatformInterface::setOpsRecovery(XBH_BOOL bEnable, XBH_SOURCE_E enSource)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
     XLOGW("this func is not implement");
@@ -2282,7 +2481,17 @@ XBH_S32 XbhPlatformInterface::getRkpCsrInfo(XBH_CHAR* read_buffer, int buffer_si
 XBH_S32 XbhPlatformInterface::setAgingModeState(XBH_S32 u32Value)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
-    XLOGW("this func is not implement");
+    XBH_CHAR s8Buff[XBH_CUSPARAM_AGING_MODE_STATE_LEN] = {0};
+    if (u32Value == 1)
+    {
+        s8Buff[0] = 1;
+    }
+    else
+    {
+        s8Buff[0] = 0;
+    }
+    s32Ret = XbhPartitionData::getInstance()->setAgingModeState((XBH_VOID *)s8Buff);
+    XLOGD("setAgingModeState s8Buff[0]= %d \n", s8Buff[0]);
     return  s32Ret;
 }
 
@@ -2294,7 +2503,10 @@ XBH_S32 XbhPlatformInterface::setAgingModeState(XBH_S32 u32Value)
 XBH_S32 XbhPlatformInterface::getAgingModeState(XBH_S32 *u32Value)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
-    XLOGW("this func is not implement");
+    XBH_CHAR s8Buff[XBH_CUSPARAM_AGING_MODE_STATE_LEN] = {0};
+    s32Ret = XbhPartitionData::getInstance()->getAgingModeState((XBH_VOID *)s8Buff);
+    XLOGD("getAgingModeState s8Buff[0]= %d \n", s8Buff[0]);
+    *u32Value =  s8Buff[0] == 1 ? 1 : 0;
     return  s32Ret;
 }
 
@@ -2352,6 +2564,121 @@ XBH_S32 XbhPlatformInterface::getDeviceId(XBH_CHAR* strDeviceId)
     XLOGW("this func is not implement");
     return  s32Ret;
 }
+
+/**
+* get  USBC Forward and Reverse Insertion Det, 
+* retval 0:success,-1:failure
+*/
+XBH_S32 XbhPlatformInterface::getUSBCForwardReverseInsertionDet(XBH_SOURCE_E idx, XBH_S32 *u32Value)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
+* set default multiuser enable status
+*/
+XBH_S32 XbhPlatformInterface::setMultiUser(const XBH_CHAR* status)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
+* get default multiuser enable status
+*/
+XBH_S32 XbhPlatformInterface::getMultiUser(XBH_CHAR* status)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
+* set default vspage enable status
+*/
+XBH_S32 XbhPlatformInterface::setVSPage(const XBH_CHAR* status)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
+* get default vspage enable status
+*/
+XBH_S32 XbhPlatformInterface::getVSPage(XBH_CHAR* status)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
+* set default sku status
+*/
+XBH_S32 XbhPlatformInterface::setCustomSKU(const XBH_CHAR* status)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
+* get default sku enable status
+*/
+XBH_S32 XbhPlatformInterface::getCustomSKU(XBH_CHAR* status)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
+* set default bootmode status
+*/
+XBH_S32 XbhPlatformInterface::setBootMode(const XBH_CHAR* status)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
+* get default bootmode status
+*/
+XBH_S32 XbhPlatformInterface::getBootMode(XBH_CHAR* status)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
+* 将HVB KEY写入到hisi的芯片并使能安全芯片
+* retval 0:success,-1:failure
+*/
+XBH_S32 XbhPlatformInterface::setSecurityHvbKey()
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
+* 获取hisi芯片的安全芯片使能状态
+* param[out] u32Status 使用能状态 0：未使用，1：已使能
+* retval 0:success,-1:failure
+*/
+XBH_S32 XbhPlatformInterface::getSecurityHvbKeyStatus(XBH_U32 *u32Status)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
 /******************************************************************************DEVICE***********************************************************/
 /**
  * 设置IO输出的电平
@@ -2824,6 +3151,57 @@ XBH_S32 XbhPlatformInterface::upgradeExtendIc(const XBH_CHAR* filename, XBH_BOOL
     return  s32Ret;
 }
 
+
+/**
+ * 升级扩展IC
+ * @param data      dataflow
+ * @param force     是否强制升级
+ * @param devType   对应设备类型
+ *                    0x000: FRONT_DEV6563_1
+ *                    0x001: FRONT_DEV6563_2
+ *                    0x002: FRONT_DEV6563_3
+ *                    0x003: FRONT_DEV6563_3
+ *                    0x004: BOARD_DEV6563_1
+ *                    0x005: BOARD_DEV6563_2
+ *                    0x006: BOARD_DEV6563_3
+ *                    0x007: BOARD_DEV6563_4
+ *                    0x008: BOARD_GSV2705_1
+ *                    0x009: BOARD_GSV2705_2
+ *                    0x00a: BOARD_GSV2715_1
+ *                    0x00b: BOARD_GSV2715_2
+ *                    0x00c: BOARD_GSV6712_1
+ *                    0x00d: BOARD_GSV2712
+ *                    0x00e: FRONT_GSV2712
+ *                    0x00f: BOARD_GSV2202E
+ *                    0x010: FRONT_GSV2202E
+ *                    0x011: BOARD_GSV2702
+ *                    0x012: FRONT_GSV2702
+ *                    0x100: BOARD_LT8711
+ *                    0x101: FRONT_LT8711
+ *                    0x102: BOARD_LT8711UXE1
+ *                    0x103: FRONT_LT8711UXE1
+ *                    0x104: BOARD_LT8668SX_1
+ *                    0x105: BOARD_LT8668SXC_1
+ *                    0x200: ITE68411
+ *                    0x201: MN869129
+ *                    0x202: ITE6265
+ *                    0x203: ITE6563OUT
+ *                    0x204: LT6711A
+ *                    0x300: FRONT_VL105
+ *                    0x301: BOARD_VL105
+ *                    0x400: MCU
+ *                    0x500: AUDIO_CODEC
+ * retval 0:success,-1:failure
+ */
+XBH_S32 XbhPlatformInterface::upgradeExtendIcByData(XBH_U8 *data, XBH_U32 dataLen, XBH_BOOL force, XBH_U32 devType)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+
+
 /**
  * 扩展IC 是否正在升级状态
  *
@@ -3127,6 +3505,30 @@ XBH_S32 XbhPlatformInterface::getUsbcConfig(XBH_S32* type)
     XLOGW("this func is not implement");
     return  s32Ret;
 }
+
+/**
+ * 获取OTG端口是HOST模式还是DEVICE模式, TYPE-B以及TYPE-C in/out端子均可连接SOC OTG，因方案各异
+ * param[in] type. 0是HOST, 1是DEVICE
+ * retval int. 设置是否成功
+*/
+XBH_S32 XbhPlatformInterface::getHostOrDeviceStatus(XBH_S32* type)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+/**
+ * 设置OTG端口是HOST模式还是DEVICE模式, TYPE-B以及TYPE-C in/out端子均可连接SOC OTG，因方案各异
+ * param[in] type. 0是HOST, 1是DEVICE
+ * retval int. 设置是否成功
+*/
+XBH_S32 XbhPlatformInterface::setHostOrDeviceStatus(XBH_S32 type)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
 /**
  * 设置屏幕单的镜像模式
  * param[in] value. true：镜像     false：非镜像
@@ -3710,6 +4112,17 @@ XBH_S32 XbhPlatformInterface::getRkpStatus(XBH_CHAR* data)
 }
 
 /**
+ * 板控升级前的准备工作 prepareIncreaseBinUpgrade
+ * retval 0:success,-1:failure
+ */
+XBH_S32 XbhPlatformInterface::prepareIncreaseBinUpgrade()
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
  * smart工厂需要存储产品的PN码，一个系列对应一个PN码
  * param[in] data 数据
  * retval 0:success,-1:failure
@@ -3957,6 +4370,116 @@ XBH_S32 XbhPlatformInterface::getBurnFactorySN(XBH_MATERAL_TYPE materialrype, XB
 }
 
 XBH_S32 XbhPlatformInterface::setTypeCPdAbility(XBH_PDCAPACITY_POWER pdability, XBH_SOURCE_E enSource)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/*
+* 获取edid机型名
+* param[in] pBuff 要读取的实际数据
+* retval 0:success,-1:failure
+*/
+XBH_S32 XbhPlatformInterface::getEdidModelName(std::string &pBuff)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/*
+* 获取edid序列号
+* param[in] serialArr 序列号buff
+* retval 0:success,-1:failure
+*/
+XBH_S32 XbhPlatformInterface::getEdidSn(std::string &pBuff)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**********************************************************************************************OPS Bypass************************************************************************************************/
+/**
+* 获取OPS回传的数据情况
+* param[out] OPS回传数据
+* retval 0:success,-1:failure
+*/
+XBH_S32 XbhPlatformInterface::getOPSBypassDataLen(XBH_U8* u8Data)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
+* OPS透传数据
+* param[in] OPS类型
+* param[in] 数据长度
+* param[out] OPS回传数据
+* retval 0:success,-1:failure
+*/
+XBH_S32 XbhPlatformInterface::SendOPSBypassData(XBH_SOURCE_E type, XBH_U8 u8Len, XBH_U8* u8Data)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
+* 将RTC数据保存到不可擦除分区
+* param[in] RTC数据
+* retval 0:success,-1:failure
+*/
+XBH_S32 XbhPlatformInterface::setReferRTCInfo(const XBH_CHAR* pBuff)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
+* 从不可擦除分区读取RTC数据
+* param[out] 回传数据
+* retval 0:success,-1:failure
+*/
+XBH_S32 XbhPlatformInterface::getReferRTCInfo(XBH_CHAR* pBuff)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
+* 通过读取节点获取KTC触摸框必要信息绕过EDLA权限问题
+* param[out] 回传数据
+* retval 0:success,-1:failure
+*/
+XBH_S32 XbhPlatformInterface::getKtcTouchInfo(XBH_CHAR* pBuff)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
+ * 获取EMMC版本
+ * @param pu32Version [out] 返回EMMC版本号(16进制)
+ * @return XBH_SUCCESS 成功，XBH_FAILURE 失败
+ */
+XBH_S32 XbhPlatformInterface::getEmmcVersion(XBH_U32 *pu32Version)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+/**
+ * 获取EMMC寿命（返回MLC和SLC中的最大值）
+ * @param pu32LifeTime [out] 返回EMMC寿命值(16进制)
+ * @return XBH_SUCCESS 成功，XBH_FAILURE 失败
+ */
+XBH_S32 XbhPlatformInterface::getEmmcLifeTime(XBH_U32 *pu32LifeTime)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
     XLOGW("this func is not implement");

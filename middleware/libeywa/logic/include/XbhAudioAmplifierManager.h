@@ -84,8 +84,22 @@ public:
     */
     XBH_S32 getEqEnable(XBH_BOOL* bEnable);
     /**
-     * 设置低音增益
-    * param[in] s32Value 增益值
+    * 设置音频输出的前置增益
+    * param[in] enEqMode. EQ阶段
+    * param[out] s32Value. 增益值
+    * retval 0:success,-1:failure
+    */
+    XBH_S32 setAudioEq(XBH_EQ_MODE_E enEqMode, XBH_S32 s32Value);
+    /**
+    * 获取音频输出的前置增益
+    * param[in] enEqMode. EQ阶段
+    * param[out] s32Value. 增益值
+    * retval 0:success,-1:failure
+    */
+    XBH_S32 getAudioEq(XBH_EQ_MODE_E enEqMode, XBH_S32* s32Value);
+    /**
+     * 获取低音增益
+    * param[out] s32Value 增益值
     * retval 0:success,-1:failure
     */
     XBH_S32 setBass(XBH_S32 s32Value);

@@ -9,8 +9,9 @@
 #include <hardware/board.h>
 #include <unistd.h>
 #include <cutils/properties.h>
+#include "XbhMWThread.h"
 
-class XbhXMM8195_U_V2 : public XbhMtk_8195
+class XbhXMM8195_U_V2 : public XbhMtk_8195, public XbhMWThread
 {
 public:
     static XbhXMM8195_U_V2* getInstance();
@@ -75,8 +76,7 @@ public:
     XBH_S32 initSrcDetGpioIrq();
     //override
     XBH_S32 setOnStop();
-    //override
-    XBH_S32 setARCEnable(XBH_BOOL bEnable);
+
     //override
     XBH_S32 setEqEnable(XBH_BOOL bEnable);
     //override
@@ -135,15 +135,27 @@ public:
     XBH_S32 getDP1SignalStatus(XBH_S32 *status);
     //override
     XBH_S32 getOps1SignalStatus(XBH_S32 *status);
+    //override
+    XBH_S32 getEthPortSpeed(XBH_S32 port, XBH_S32* value);
+    //override
+    XBH_S32 setSn(const XBH_CHAR* strSn);
+    //override
+    XBH_S32 getSn(XBH_CHAR* strSn);
+
 
 private:
     XBH_S32 setWolEnable(XBH_BOOL bEnable);
+    XBH_BOOL GetEth0ReadyStatus(XBH_S32 *pbEnable);
+    XBH_S32 initWOL();
+    static void* initWolTask(void* arg);
     XbhXMM8195_U_V2();
     ~XbhXMM8195_U_V2();
 
 private:
+    void run(const void *arg);
     static XbhXMM8195_U_V2 *mInstance;
     static XbhMutex mLock;
+    XBH_BOOL mIsSetEnabled;/*setSN执行标志*/
 };
 
 #endif //XBH_XMM8195_U_H

@@ -50,7 +50,7 @@
 #include <string>
 #include <vector>
 #include <algorithm>
-#include <cmath> 
+#include <cmath>
 #include "uapi_gpio.h"
 #include "uapi_i2c.h"
 #include "uapi_uart.h"
@@ -58,12 +58,18 @@
 #include "uapi_hdmirx.h"
 #include "uapi_otp.h"
 #include "uapi_lsadc.h"
+#include "uapi_pq.h"
+#include "uapi_disp.h"
+#include "uapi_pdm.h"
+#include "hi_mw_cfg.h"
+#include "hi_mw_array.h"
 
 //kernel 默认打印等级
 #ifndef ITEM_KERNEL_LOGLEVEL
 #define ITEM_KERNEL_LOGLEVEL 7
 #endif
 #define RTC_DEV_PATH    "/dev/rtc0"
+#define PQ_BIN_PATH     "/odm/atv/pq"
 
 
 #ifndef XBH_BOARD_NTC_ADC_THERMISTOR_VAL
@@ -140,7 +146,8 @@ static struct gpio_common_info gpio_common_table[] = {
 //Xbh Partition
 #define MSDC_CUSDATA_PATH  "/dev/block/by-name/cusdata"
 #define MSDC_CUSPARAM_PATH "/dev/block/by-name/cusparam"
-#define XBH_CUST_LOGO_PATH "/mnt/xbhcust/logo/logo.img"
+//HuaWei starting logo
+#define XBH_CUST_LOGO_PATH "/mnt/xbhcust/logo/bootlogo.jpg"
 
 //无效数值
 #undef XBH_NO_CONFIG
@@ -228,8 +235,6 @@ static XBH_S32 checkMacFormat(const XBH_CHAR* strMacAddress)
     return XBH_SUCCESS;
 }
 
-
-
 //----------------------------------------------------- static function end---------------------------------------------------------------------------------------------------------
 XBH_S32 XbhHi_610::setGpioOutputValue(XBH_U32 u32GpioNumber, XBH_U32 u32GpioValue)
 {
@@ -276,7 +281,8 @@ XBH_S32 XbhHi_610::setGpioOutputValue(XBH_U32 u32GpioNumber, XBH_U32 u32GpioValu
     }
 
     s32Ret = uapi_gpio_write(u32GpioNumber / 8, u32GpioNumber % 8, (td_bool)u32GpioValue);
-    if (s32Ret != TD_SUCCESS) {
+    if (s32Ret != TD_SUCCESS)
+    {
         XLOGE("uapi_gpio_write ErrorCode=0x%x, set gpio-%d out value fail\n", s32Ret, u32GpioNumber);
         return XBH_FAILURE;
     }
@@ -330,7 +336,8 @@ XBH_S32 XbhHi_610::getGpioOutputValue(XBH_U32 u32GpioNumber, XBH_U32 *u32GpioVal
     }
 
     s32Ret = uapi_gpio_read(u32GpioNumber / 8, u32GpioNumber % 8, &value);
-    if (s32Ret != TD_SUCCESS) {
+    if (s32Ret != TD_SUCCESS)
+    {
         XLOGE("uapi_gpio_read ErrorCode=0x%x, get gpio-%d out value fail\n", s32Ret, u32GpioNumber);
         return XBH_FAILURE;
     }
@@ -376,7 +383,8 @@ XBH_S32 XbhHi_610::getGpioInputValue(XBH_U32 u32GpioNumber, XBH_U32 *u32GpioValu
     }
 
     s32Ret = uapi_gpio_read(u32GpioNumber / 8, u32GpioNumber % 8, &value);
-    if (s32Ret != TD_SUCCESS) {
+    if (s32Ret != TD_SUCCESS)
+    {
         XLOGE("uapi_gpio_read ErrorCode=0x%x, get gpio-%d out value fail\n", s32Ret, u32GpioNumber);
         return XBH_FAILURE;
     }
@@ -518,7 +526,6 @@ XBH_S32 XbhHi_610::getADCChannelValue(XBH_ADC_CHANNEL_NUM_E enChannel, XBH_U32 *
     {
         *u32Value = value;
     }
-
     return ret;
 }
 
@@ -744,13 +751,6 @@ XBH_S32 XbhHi_610::setRtcTime(XBH_RTC_INFO_S *stRtcInfo)
     return XBH_SUCCESS;
 }
 
-XBH_S32 XbhHi_610::setLedPwrStatus(XBH_LED_LIGHT_E enState)
-{
-    XBH_S32 ret = XBH_FAILURE;
-
-    return ret;
-}
-
 XBH_S32 XbhHi_610::setBrightMax(XBH_U32 u32Value)
 {
     XBH_S32 ret = XBH_FAILURE;
@@ -787,14 +787,6 @@ XBH_S32 XbhHi_610::setPwmPolarity(XBH_BOOL bEnable, XBH_PANEL_NUM_E enPanel)
 }
 
 XBH_S32 XbhHi_610::getPwmPolarity(XBH_BOOL* bEnable, XBH_PANEL_NUM_E enPanel)
-{
-    XBH_S32 ret = XBH_FAILURE;
-
-    return ret;
-}
-
-
-XBH_S32 XbhHi_610::getLedPwrStatus(XBH_LED_LIGHT_E* enState)
 {
     XBH_S32 ret = XBH_FAILURE;
 
@@ -1148,7 +1140,7 @@ XBH_S32 XbhHi_610::delAllNfcId()
 XBH_S32 XbhHi_610::setMcuFattMode(XBH_S32 mode)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
-    //s32Ret = XbhMcuManager::getInstance()->setMcuFattMode(mode);
+    s32Ret = XbhMcuManager::getInstance()->setMcuFattMode(mode);
     XLOGW("setMcuFattMode s32Ret = %d", s32Ret);
     return s32Ret;
 }
@@ -1156,7 +1148,7 @@ XBH_S32 XbhHi_610::setMcuFattMode(XBH_S32 mode)
 XBH_S32 XbhHi_610::getMcuFattMode(XBH_S32 *mode)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
-    //s32Ret = XbhMcuManager::getInstance()->getMcuFattMode(mode);
+    s32Ret = XbhMcuManager::getInstance()->getMcuFattMode(mode);
     XLOGW("getMcuFattMode s32Ret = %d", s32Ret);
     return s32Ret;
 }
@@ -1164,21 +1156,21 @@ XBH_S32 XbhHi_610::getMcuFattMode(XBH_S32 *mode)
 XBH_S32 XbhHi_610::setMcuIIcBypass(XBH_U8 u8IIcNum, XBH_U8 u8DeviceAddr, XBH_U8 u8RegAddr, XBH_U8 u8Len, XBH_U8* u8Data)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
-    //s32Ret = XbhMcuManager::getInstance()->setMcuIIcBypass(u8IIcNum, u8DeviceAddr, u8RegAddr, u8Len, u8Data);
+    s32Ret = XbhMcuManager::getInstance()->setMcuIIcBypass(u8IIcNum, u8DeviceAddr, u8RegAddr, u8Len, u8Data);
     return s32Ret;
 }
 
 XBH_S32 XbhHi_610::getMcuIIcBypass(XBH_U8 u8IIcNum, XBH_U8 u8DeviceAddr, XBH_U8 u8RegAddr, XBH_U8 u8Len, XBH_U8* u8Data)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
-    //s32Ret = XbhMcuManager::getInstance()->getMcuIIcBypass(u8IIcNum, u8DeviceAddr, u8RegAddr, u8Len, u8Data);
+    s32Ret = XbhMcuManager::getInstance()->getMcuIIcBypass(u8IIcNum, u8DeviceAddr, u8RegAddr, u8Len, u8Data);
     return s32Ret;
 }
 
 XBH_S32 XbhHi_610::setMcuUartBypassPara(XBH_U8 u8UartNum, XBH_U8 baud)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
-    //s32Ret = XbhMcuManager::getInstance()->setMcuUartBypassPara(u8UartNum, baud);
+    s32Ret = XbhMcuManager::getInstance()->setMcuUartBypassPara(u8UartNum, baud);
     XLOGW("setMcuUartBypassPara s32Ret = %d", s32Ret);
     return s32Ret;
 }
@@ -1186,7 +1178,7 @@ XBH_S32 XbhHi_610::setMcuUartBypassPara(XBH_U8 u8UartNum, XBH_U8 baud)
 XBH_S32 XbhHi_610::setMcuUartBypass(XBH_U8 u8Len, XBH_U8* u8Data)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
-    //s32Ret = XbhMcuManager::getInstance()->setMcuUartBypass(u8Len, u8Data);
+    s32Ret = XbhMcuManager::getInstance()->setMcuUartBypass(u8Len, u8Data);
     XLOGW("setMcuUartBypass s32Ret = %d", s32Ret);
     return s32Ret;
 }
@@ -1194,7 +1186,7 @@ XBH_S32 XbhHi_610::setMcuUartBypass(XBH_U8 u8Len, XBH_U8* u8Data)
 XBH_S32 XbhHi_610::getMcuUartBypass(XBH_U8 u8Len, XBH_U8* u8Data)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
-    //s32Ret = XbhMcuManager::getInstance()->getMcuUartBypass(u8Len, u8Data);
+    s32Ret = XbhMcuManager::getInstance()->getMcuUartBypass(u8Len, u8Data);
     XLOGW("getMcuUartBypass s32Ret = %d", s32Ret);
     return s32Ret;
 }
@@ -1224,165 +1216,29 @@ XBH_S32 XbhHi_610::getFattKeypadInfo(XBH_S32* keypad_enable, XBH_S32* key_count,
 
 XBH_S32 XbhHi_610::getWakeUpReason(XBH_WAKEUP_S *stWake)
 {
-    uint8_t buff[XBH_CUSPARAM_WAKEUP_INFO_LEN] = {0};
-    struct WakeUp_Info wakedata;
-    XBH_S32 s32Ret = XBH_FAILURE;
-    //s32Ret = XbhPartitionData::getInstance()->getWakeupInfoParamValue(buff);
-    wakedata.wakeup_flag = buff[0];
-    wakedata.source = (buff[1] >> 4) - 1;
-    wakedata.data = (uint16_t)(buff[3] * 256 | buff[2]) & 0xffff;
-    XLOGD("wakeup data flag:%d source:%d data:%d \n", wakedata.wakeup_flag, wakedata.source, wakedata.data);
-    if (wakedata.wakeup_flag == 0)
+    if (stWake == NULL)
     {
-        stWake->enWakeup = XBH_WAKEUP_BUTT;
-        XLOGD("getWakeUpReason is reboot \n");
         return XBH_FAILURE;
     }
-    if (wakedata.source == WAKEUP_CEC)
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    XBH_U8  pu8Data[10] = {0};
+
+    s32Ret = getIICData(XBH_FUNC_MCU_I2C_NUM, XBH_FUNC_MCU_I2C_ADDR, CMD_I2C_GET_WAKEUP_INFO, 0x01, 10, pu8Data);
+
+    stWake->enWakeup = (XBH_WAKEUP_E)pu8Data[0];
+    stWake->u32Value = (uint16_t)(pu8Data[3] * 256 | pu8Data[2]) & 0xffff;
+
+    if (XBH_WAKEUP_SOURCE == stWake->enWakeup)
     {
-        stWake->enWakeup = XBH_WAKEUP_CEC;
-        switch(wakedata.data)
-        {
-#ifdef XBH_WAKE_UP_HDMI1_DET
-            case 0x1000:
-            {
-                stWake->enSrc = XBH_SOURCE_HDMI1;
-                break;
-            }
-#endif
-
-#ifdef XBH_WAKE_UP_HDMI2_DET
-            case 0x2000:
-            {
-                stWake->enSrc = XBH_SOURCE_HDMI2;
-                break;
-            }
-#endif
-
-#ifdef XBH_WAKE_UP_F_HDMI_DET
-            case 0x3000:
-            {
-                stWake->enSrc = XBH_SOURCE_F_HDMI1;
-                break;
-            }
-#endif
-        }
+        stWake->enSrc = (XBH_SOURCE_E)pu8Data[1];
     }
-    else if (wakedata.source == WAKEUP_IR)
+    else
     {
-        stWake->enWakeup = XBH_WAKEUP_IR;
+        XLOGD("unknown XBH_WAKEUP_E type!");
     }
-    else if (wakedata.source == WAKEUP_UART)
-    {
-        stWake->enWakeup = XBH_WAKEUP_UART;
-    }
-    else if (wakedata.source == WAKEUP_GPIO)
-    {
-        switch(wakedata.data)
-        {
-#ifdef XBH_WAKE_UP_POWER_KEY
-            case XBH_WAKE_UP_POWER_KEY:
-            {
-                stWake->enWakeup = XBH_WAKEUP_KEYPAD;
-                break;
-            }
-#endif
 
-#ifdef XBH_WAKE_UP_ETH
-            case XBH_WAKE_UP_ETH:
-            {
-                stWake->enWakeup = XBH_WAKEUP_ETH;
-                break;
-            }
-#endif
+    XLOGD("getMcuWakeUpInfo end %d %d %04x", stWake->enWakeup, stWake->enSrc, stWake->u32Value);
 
-#ifdef XBH_WAKE_UP_MCU_IRQ
-            case XBH_WAKE_UP_MCU_IRQ:
-            {
-                stWake->enWakeup = XBH_WAKEUP_NFC;
-                break;
-            }
-#endif
-
-#ifdef XBH_WAKE_UP_PIR2
-            case XBH_WAKE_UP_PIR2:
-            {
-                stWake->enWakeup = XBH_WAKEUP_PIR;
-                break;
-            }
-#endif
-
-#ifdef XBH_WAKE_UP_PIR1
-            case XBH_WAKE_UP_PIR1:
-            {
-                stWake->enWakeup = XBH_WAKEUP_PIR;
-                break;
-            }
-#endif
-
-#ifdef XBH_WAKE_UP_HDMI1_DET
-            case XBH_WAKE_UP_HDMI1_DET:
-            {
-                stWake->enWakeup = XBH_WAKEUP_SOURCE;
-                stWake->enSrc = XBH_SOURCE_HDMI1;
-                break;
-            }
-#endif
-
-#ifdef XBH_WAKE_UP_HDMI2_DET
-            case XBH_WAKE_UP_HDMI2_DET:
-            {
-                stWake->enWakeup = XBH_WAKEUP_SOURCE;
-                stWake->enSrc = XBH_SOURCE_HDMI2;
-                break;
-            }
-#endif
-
-#ifdef XBH_WAKE_UP_DP_DET
-            case XBH_WAKE_UP_DP_DET:
-            {
-                stWake->enWakeup = XBH_WAKEUP_SOURCE;
-                stWake->enSrc = XBH_SOURCE_DP1;
-                break;
-            }
-#endif
-
-#ifdef XBH_WAKE_UP_TYPE_C_DET
-            case XBH_WAKE_UP_TYPE_C_DET:
-            {
-                stWake->enWakeup = XBH_WAKEUP_SOURCE;
-                stWake->enSrc = XBH_SOURCE_USBC1;
-                break;
-            }
-#endif
-
-#ifdef XBH_WAKE_UP_F_HDMI_DET
-            case XBH_WAKE_UP_F_HDMI_DET:
-            {
-                stWake->enWakeup = XBH_WAKEUP_SOURCE;
-                stWake->enSrc = XBH_SOURCE_F_HDMI1;
-                break;
-            }
-#endif
-
-#ifdef XBH_WAKE_UP_F_TYPE_C_DET
-            case XBH_WAKE_UP_F_TYPE_C_DET:
-            {
-                stWake->enWakeup = XBH_WAKEUP_SOURCE;
-                stWake->enSrc = XBH_SOURCE_F_USBC1;
-                break;
-            }
-#endif
-#ifdef XBH_WAKE_UP_VGA1_DET
-            case XBH_WAKE_UP_VGA1_DET:
-            {
-                stWake->enWakeup = XBH_WAKEUP_SOURCE;
-                stWake->enSrc = XBH_SOURCE_VGA1;
-                break;
-            }
-#endif
-        }
-    }
     return s32Ret;
 }
 
@@ -1636,9 +1492,11 @@ XBH_S32 XbhHi_610::setChipI2cData(XBH_U32 u32I2cNum, XBH_U8 u8DevAddress, XBH_U3
     //XLOGV("%s: i2cNum=0x%x,devAddress=0x%x,regAddrValue=0x%x,regAddrCount=0x%x,length=0x%x\n",
     //             __func__,(S32)u32I2cNum, u8DevAddress, u32RegAddr, u32RegAddrCount, u32Length);
     
-    if(!m_uapi_i2c_init_ok) {
+    if(!m_uapi_i2c_init_ok)
+    {
         s32Ret = uapi_i2c_init();
-        if (s32Ret != TD_SUCCESS) {
+        if (s32Ret != TD_SUCCESS)
+        {
             XLOGE("uapi_i2c_init fail, ErrorCode=0x%x\n", s32Ret);
             return XBH_FAILURE;
         }
@@ -1652,7 +1510,8 @@ XBH_S32 XbhHi_610::setChipI2cData(XBH_U32 u32I2cNum, XBH_U8 u8DevAddress, XBH_U3
    
     /* write data to device */
     s32Ret = uapi_i2c_write(u32I2cNum, &i2c_addr_info, (XBH_U8*) u8Data, u32Length);
-    if (s32Ret != TD_SUCCESS) {
+    if (s32Ret != TD_SUCCESS)
+    {
         XLOGE("I2cNum : %d - 0x%x write reg 0x%x = 0x%x ErrorCode=0x%x\r\n",
             u32I2cNum, u8DevAddress, u32RegAddr, *u8Data, s32Ret);
         return XBH_FAILURE;
@@ -1681,7 +1540,8 @@ XBH_S32 XbhHi_610::getChipI2cData(XBH_U32 u32I2cNum, XBH_U8 u8DevAddress, XBH_U3
     
     if(!m_uapi_i2c_init_ok) {
         s32Ret = uapi_i2c_init();
-        if (s32Ret != TD_SUCCESS) {
+        if (s32Ret != TD_SUCCESS)
+        {
             XLOGE("uapi_i2c_init fail, ErrorCode=0x%x\n", s32Ret);
             return XBH_FAILURE;
         }
@@ -1695,7 +1555,8 @@ XBH_S32 XbhHi_610::getChipI2cData(XBH_U32 u32I2cNum, XBH_U8 u8DevAddress, XBH_U3
    
     /* write data to device */
     s32Ret = uapi_i2c_read(u32I2cNum, &i2c_addr_info, (XBH_U8*) u8Data, u32Length);
-    if (s32Ret != TD_SUCCESS) {
+    if (s32Ret != TD_SUCCESS)
+    {
         XLOGE("I2cNum : %d - 0x%x read reg 0x%x ErrorCode=0x%x\r\n",
             u32I2cNum, u8DevAddress, u32RegAddr, s32Ret);
         return XBH_FAILURE;
@@ -1810,9 +1671,11 @@ XBH_S32 XbhHi_610::setGpioDirOutput(XBH_U32 u32GpioNumber, XBH_U32 u32GpioValue)
     XBH_UNUSED(u32GpioValue);
 
     //XLOGE(">> setGpioDirOutput(gpio_num=%d)\n", u32GpioNumber);
-    if (!m_uapi_gpio_init_ok) {
+    if (!m_uapi_gpio_init_ok)
+    {
         s32Ret = uapi_gpio_init();
-        if (s32Ret != TD_SUCCESS) {
+        if (s32Ret != TD_SUCCESS)
+        {
             XLOGE("uapi_gpio_init ErrorCode=0x%x\n", s32Ret);
             return XBH_FAILURE;
         }
@@ -1820,7 +1683,8 @@ XBH_S32 XbhHi_610::setGpioDirOutput(XBH_U32 u32GpioNumber, XBH_U32 u32GpioValue)
     }
 
     s32Ret = uapi_gpio_set_direction(u32GpioNumber / 8, u32GpioNumber % 8, TD_FALSE);
-    if (s32Ret != TD_SUCCESS) {
+    if (s32Ret != TD_SUCCESS)
+    {
         XLOGE("uapi_gpio_set_direction ErrorCode=0x%x, gpionum %d\n", s32Ret, u32GpioNumber);
         return XBH_FAILURE;
     }
@@ -1833,16 +1697,19 @@ XBH_S32 XbhHi_610::setGpioDirInput(XBH_U32 u32GpioNumber)
     XBH_S32 s32Ret = XBH_SUCCESS;
 
     //XLOGE(">> setGpioDirInput(gpio_num=%d)\n", u32GpioNumber);
-    if (!m_uapi_gpio_init_ok) {
+    if (!m_uapi_gpio_init_ok)
+    {
         s32Ret = uapi_gpio_init();
-        if (s32Ret != TD_SUCCESS) {
+        if (s32Ret != TD_SUCCESS)
+        {
             XLOGE("uapi_gpio_init ErrorCode=0x%x\n", s32Ret);
             return XBH_FAILURE;
         }
         m_uapi_gpio_init_ok = XBH_TRUE;
     }
     s32Ret = uapi_gpio_set_direction(u32GpioNumber / 8, u32GpioNumber % 8, TD_TRUE);
-    if (s32Ret != TD_SUCCESS) {
+    if (s32Ret != TD_SUCCESS)
+    {
         XLOGE("uapi_gpio_set_direction ErrorCode=0x%x, gpionum %d\n", s32Ret, u32GpioNumber);
         return XBH_FAILURE;
     }
@@ -1926,7 +1793,7 @@ XBH_S32 XbhHi_610::loadProperty()
 XBH_S32 XbhHi_610::setDeviceId(const XBH_CHAR* strDeviceId)
 {
     XBH_S32 s32Ret = XBH_SUCCESS;
-    //s32Ret = XbhPartitionData::getInstance()->setDeviceId(strDeviceId);
+    s32Ret = XbhPartitionData::getInstance()->setDeviceId(strDeviceId);
     XLOGD("getDeviceId: %s\n", strDeviceId);
     return  s32Ret;
 }
@@ -1934,7 +1801,7 @@ XBH_S32 XbhHi_610::setDeviceId(const XBH_CHAR* strDeviceId)
 XBH_S32 XbhHi_610::getDeviceId(XBH_CHAR* strDeviceId)
 {
     XBH_S32 s32Ret = XBH_SUCCESS;
-    //s32Ret = XbhPartitionData::getInstance()->getDeviceId(strDeviceId);
+    s32Ret = XbhPartitionData::getInstance()->getDeviceId(strDeviceId);
     XLOGD("getDeviceId: %s\n", strDeviceId);
     return  s32Ret;
 }
@@ -1953,6 +1820,21 @@ XBH_S32 XbhHi_610::getSn(XBH_CHAR* strSn)
     XBH_S32 s32Ret = XBH_SUCCESS;
     s32Ret  = XbhPartitionData::getInstance()->getSn(strSn);
     return  s32Ret;
+}
+
+//override
+XBH_S32 XbhHi_610::setCustProductInfo(const XBH_CHAR* pBUff)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    s32Ret  = XbhPartitionData::getInstance()->setCustProductInfo(pBUff);
+    return s32Ret;
+}
+//override
+XBH_S32 XbhHi_610::getCustProductInfo(XBH_CHAR* pBUff)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    s32Ret  = XbhPartitionData::getInstance()->getCustProductInfo(pBUff);
+    return s32Ret;
 }
 
 //Set Chip RunTime
@@ -1975,6 +1857,10 @@ XBH_S32 XbhHi_610::getChipRunTime(XBH_S32* time)
 XBH_S32 XbhHi_610::setMacAddress(XBH_S32 macType, const XBH_CHAR* strMacAddress)
 {
     XBH_S32 s32Ret = XBH_SUCCESS;
+    if (macType == XBH_MACTYPE_RNDIS)   //RNDIS
+    {
+        s32Ret = XbhPartitionData::getInstance()->saveFactoryMac(XBH_RNDIS, strMacAddress);
+    }
     //s32Ret  = XbhPartitionData::getInstance()->setMacAddress(strMacAddress);
     return  s32Ret;
 }
@@ -1983,6 +1869,10 @@ XBH_S32 XbhHi_610::setMacAddress(XBH_S32 macType, const XBH_CHAR* strMacAddress)
 XBH_S32 XbhHi_610::getMacAddress(XBH_S32 macType, XBH_CHAR* strMacAddress)
 {
     XBH_S32 s32Ret = XBH_SUCCESS;
+    if (macType == XBH_MACTYPE_RNDIS)   //RNDIS
+    {
+        s32Ret = XbhPartitionData::getInstance()->getFactoryMac(XBH_RNDIS, strMacAddress);
+    }
     //s32Ret  = XbhPartitionData::getInstance()->getMacAddress(strMacAddress);
     return  s32Ret;
 }
@@ -2160,14 +2050,32 @@ XBH_S32 XbhHi_610::getHdcpKeyName(XBH_HDCP_TYPE_E type, XBH_CHAR* strHdcpFileNam
 
 XBH_S32 XbhHi_610::setGammaGroup(XBH_S32 s32Value)
 {
-    XBH_S32 s32Ret = XBH_SUCCESS;
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_CHAR s8Buff[XBH_CUSDATA_BOE_GAMMA_VALUE_LEN] = {0};
+    s8Buff[0] = s32Value;
+    XLOGD("setGammaGroup %d \n", s8Buff[0]);
+    
+    s32Ret = uapi_pq_set_table(UAPI_DISPLAY1, UAPI_PQ_IMAGE_ALL, UAPI_PQ_TABLE_MODULE_GAMMA, s32Value);
+    if (s32Ret != TD_SUCCESS) 
+    {
+        XLOGD("current s32Value:%d not support, set s32Value:0", s32Value);
+    } 
+    else 
+    {
+        XbhPartitionData::getInstance()->setGammaGroup((XBH_VOID *)s8Buff);
+    }
 
-    return  s32Ret;
+    return s32Ret;
 }
 
 XBH_S32 XbhHi_610::getGammaGroup(XBH_S32* s32Value)
 {
-    return 0;
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_CHAR s8Buff[XBH_CUSDATA_BOE_GAMMA_VALUE_LEN] = {0};
+    s32Ret = XbhPartitionData::getInstance()->getGammaGroup((XBH_VOID *)s8Buff);
+    *s32Value =  s8Buff[0] ;
+    XLOGD("getGammaGroup %d \n", *s32Value);
+    return s32Ret;
 }
 
 XBH_S32 XbhHi_610::setPictureMode(XBH_PICMODE_E enPicMode)
@@ -2322,11 +2230,86 @@ XBH_S32 XbhHi_610::getBacklightWithOutSave(XBH_U32* value, XBH_PANEL_NUM_E enPan
  * 获取当前信道信号状态
  * status 1:无信号，0：有信号
  */
-XBH_S32 XbhHi_610::getSignalStatus(XBH_S32 *status)
+XBH_S32 XbhHi_610::getSignalStatus(XBH_SOURCE_E currSource,XBH_S32 *status)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
+    const XBH_CHAR* hdmirx_path = nullptr;
+    switch(currSource) {
+        case XBH_SOURCE_OPS1:
+            hdmirx_path = "/proc/msp/hdmirx1";
+            break;
+        case XBH_SOURCE_OPS2:
+            hdmirx_path = "/proc/msp/hdmirx2";
+            break;
+        case XBH_SOURCE_F_HDMI1:
+        case XBH_SOURCE_F_USBC1:
+            hdmirx_path = "/proc/msp/hdmirx0";
+            break;
+        default:
+            XLOGE("getSignalStatus: unsupported source %d", currSource);
+            return XBH_FAILURE;
+    }
 
-    return  s32Ret;
+    FILE *devFile = fopen(hdmirx_path, "r");
+    if (devFile == NULL) {
+        XLOGE("getSignalStatus: open %s failed: %s", hdmirx_path, strerror(errno));
+        return XBH_FAILURE;
+    }
+
+    std::unique_ptr<FILE, decltype(&fclose)> fileCloser(devFile, &fclose);
+    XBH_CHAR line[512];
+    XBH_BOOL found = XBH_FALSE;
+
+    while (fgets(line, sizeof(line), devFile)) {
+        // 查找包含 cur_port_state 的行
+        XBH_CHAR* statePtr = strstr(line, "cur_port_state");
+        if (statePtr != nullptr) {
+            // 找到冒号位置
+            XBH_CHAR* colonPtr = strchr(statePtr, ':');
+            if (colonPtr != nullptr) {
+                colonPtr++; // 跳过冒号
+
+                // 去除前导空格
+                while (*colonPtr == ' ' || *colonPtr == '\t') colonPtr++;
+
+                // 找到下一个竖线或行尾
+                XBH_CHAR* endPtr = strchr(colonPtr, '|');
+                if (endPtr != nullptr) {
+                    *endPtr = '\0'; // 截断字符串
+                } else {
+                    // 如果没有竖线，则去除行尾换行符
+                    XBH_CHAR* newlinePtr = strchr(colonPtr, '\n');
+                    if (newlinePtr != nullptr) *newlinePtr = '\0';
+                }
+
+                // 去除尾部空格
+                XBH_CHAR* trimPtr = colonPtr + strlen(colonPtr) - 1;
+                while (trimPtr > colonPtr && (*trimPtr == ' ' || *trimPtr == '\t')) {
+                    *trimPtr = '\0';
+                    trimPtr--;
+                }
+
+                // 判断状态
+                if (strcmp(colonPtr, "no signal") == 0 || strcmp(colonPtr, "no") == 0) {
+                    *status = XBH_TRUE;
+                } else if (strcmp(colonPtr, "stable") == 0) {
+                    *status = XBH_FALSE;
+                } else {
+                    XLOGW("getSignalStatus: unknown state value: %s", colonPtr);
+                    continue;
+                }
+                found = XBH_TRUE;
+                break;
+            }
+        }
+    }
+
+    if (!found) {
+        XLOGE("getSignalStatus: cur_port_state not found or invalid in %s", hdmirx_path);
+        return XBH_FAILURE;
+    }
+    XLOGD("getSignalStatus: source=%d, status=%d", currSource, *status);
+    return XBH_SUCCESS;
 }
 
 XBH_S32 XbhHi_610::setDelayTimeForHdmiSwitch()
@@ -2347,8 +2330,14 @@ XBH_S32 XbhHi_610::setHdmiRx5vDet(XBH_BOOL enable)
 
 XBH_S32 XbhHi_610::setSourceScreenOffset(XBH_S32 x, XBH_S32 y)
 {
-    XBH_S32 s32Ret = XBH_FAILURE;
-
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    s32Ret = uapi_disp_set_screen_relative_position(UAPI_DISPLAY0, x, y);
+    if (s32Ret != TD_SUCCESS)
+    {
+        XLOGE("uapi_disp_set_screen_relative_position wrong\n");
+        return XBH_FAILURE;
+    }
+    XLOGE("uapi_disp_set_screen_relative_position finished");
     return  s32Ret;
 }
 
@@ -2368,37 +2357,58 @@ XBH_S32 XbhHi_610::getTemperatureSensorExist(XBH_BOOL* bEnable)
 
 XBH_S32 XbhHi_610::setBootLogo(const XBH_CHAR* path)
 {
-    FILE *devFile = NULL, *imgFile = NULL;
-    XBH_CHAR buf[512] = {0};
-    XBH_S32 readSize = 0;
-
-    devFile = fopen("/dev/block/by-name/logo","wb");
-    if(devFile == NULL)
+    XBH_S32 ret = 0;
+    if (path == NULL) 
     {
-        XLOGE("open /dev/block/by-name/logo fail\n");
+        XLOGE("Update Logo open fail :/mnt/xbhcust/logo/logo.jpg is no exist\n");
         return XBH_FAILURE;
     }
 
-    imgFile = fopen(path,"rb");
-    if(imgFile == NULL)
+    struct stat statbuf;
+
+    stat(path, &statbuf);
+
+    size_t fileSize = statbuf.st_size;
+
+    FILE* fpSrc = fopen(path, "r");
+    if (fpSrc == nullptr) 
     {
-        XLOGE("open %s fail\n",path);
-        fclose(devFile);
+        XLOGE("Update Logo open fail :/mnt/xbhcust/logo/logo.jpg\n");
+        return XBH_FAILURE;
+    }
+    td_u8* pDatabuf = new td_u8[fileSize];
+    memset(pDatabuf, 0x0, fileSize);
+
+    td_s32 readSize = static_cast<td_s32>(fread(reinterpret_cast<void *>(pDatabuf), sizeof(char), fileSize, fpSrc));
+    if (readSize != fileSize) 
+    {
+        XLOGE("Update Logo fread fail");
+        delete [] pDatabuf;
+        fclose(fpSrc);
         return XBH_FAILURE;
     }
 
-    while((readSize = fread(buf, 1, sizeof(buf), imgFile)) > 0)
+    uapi_pdm_disp_param paramData = {};
+    ret = uapi_pdm_get_disp_param(UAPI_DISPLAY0, &paramData);
+    if (ret != TD_SUCCESS)
     {
-        if(fwrite(buf, 1, readSize, devFile) != readSize)
-        {
-            XLOGE("write fail!!!\n");
-            fclose(devFile);
-            fclose(imgFile);
-            return XBH_FAILURE;
-        }
+        XLOGE("call failed");
+        delete [] pDatabuf;
+        fclose(fpSrc);
+        return XBH_FAILURE;
     }
-    fclose(devFile);
-    fclose(imgFile);
+
+    ret = uapi_pdm_update_logo_content(paramData.logo_index, pDatabuf, readSize);
+    if (ret != TD_SUCCESS)
+    {
+        XLOGE("uapi_pdm_update_logo_content fail");
+        delete [] pDatabuf;
+        fclose(fpSrc);
+        return XBH_FAILURE;
+    }
+
+    delete [] pDatabuf;
+    fclose(fpSrc);
     return XBH_SUCCESS;
 }
 
@@ -2525,21 +2535,26 @@ XBH_S32 XbhHi_610::loadEdlaCust(XBH_BOOL *enable)
 {
     FILE *fp = NULL;
     XBH_S32 res = 0;
+
     fp = fopen(XBH_CUST_LOGO_PATH, "r");
     if (NULL != fp)
     {
         XLOGD("%s  exist ", XBH_CUST_LOGO_PATH);
-        //setBootLogo(XBH_CUST_LOGO_PATH);
+        setBootLogo(XBH_CUST_LOGO_PATH);
         fclose(fp);
+    }
+    else
+    {
+        XLOGD("%s no exist ", XBH_CUST_LOGO_PATH);
     }
     //loadPq();
     //res = loadProperty();
     //customerversion 一致不需要重启
-    if (res == 1) {
-        *enable = XBH_FALSE;
-    } else {
-        *enable = XBH_TRUE;
-    }
+    // if (res == 1) {
+    //     *enable = XBH_FALSE;
+    // } else {
+    //     *enable = XBH_TRUE;
+    // }
     return res;
 }
 
@@ -2567,27 +2582,183 @@ XBH_S32 XbhHi_610::getBacklightEnable(XBH_BOOL* bEnable, XBH_PANEL_NUM_E enPanel
 /**
  * 设置对应模式的具体色温数据
  * param[in] enColorTemp. 色温模式
- * param[in] data. 色温参数 ,范围0~255
+ * param[in] data. 色温参数 ,范围0~511
  * retval 0:success,-1:failure
 */
 XBH_S32 XbhHi_610::setColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data)
 {
-    XBH_S32 s32Ret = XBH_SUCCESS;
-
+    XBH_S32 s32Ret = XBH_FAILURE;
     return  s32Ret;
 }
 
 /**
  * 获取对应模式的具体色温数据
  * param[in] enColorTemp. 色温模式
- * param[out] data. 色温参数 ,范围0~255
+ * param[out] data. 色温参数 ,范围0~511
  * retval 0:success,-1:failure
 */
 XBH_S32 XbhHi_610::getColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data)
 {
-    XBH_S32 s32Ret = XBH_SUCCESS;
-
+    XBH_S32 s32Ret = XBH_FAILURE;
     return  s32Ret;
+}
+
+/**
+ * 保存对应模式的具体色温数据，保存到cusdata分区
+ * param[in] enColorTemp. 色温模式
+ * param[in] data. 色温参数 ,范围0~511
+ * retval 0:success,-1:failure
+*/
+XBH_S32 XbhHi_610::saveColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    XBH_GAIN_OFFSET_H610_DATA_S colorTempValue[XBH_COLORTEMP_BUTT];
+    XBH_S16 u32Crc16Value = 0xff;
+
+    //Confirm the input param
+    if (enColorTemp >= XBH_COLORTEMP_BUTT)
+    {
+        XLOGE("Error! saveColorTempPara fail, enColorTemp = %d\n", enColorTemp);
+        return XBH_FAILURE;
+    }
+    if (data == NULL)
+    {
+        XLOGE("Error! saveColorTempPara data is null\n");
+        return XBH_FAILURE;
+    }
+    //Get data from cusdata partition
+    memset(colorTempValue, 0, sizeof(colorTempValue));
+    s32Ret = XbhPartitionData::getInstance()->readDataFromCusdata(XBH_CUSDATA_H610_COLORTEMP_DATA_OFFSET, XBH_CUSDATA_H610_COLORTEMP_DATA_LEN, (XBH_CHAR *)colorTempValue);
+    if (s32Ret != XBH_SUCCESS)
+    {
+        XLOGE("Error! saveColorTempPara readDataFromCusdata fail, ret = %d\n", s32Ret);
+        return XBH_FAILURE;
+    }
+    //Copy data form user and calculate the crc16 value
+    colorTempValue[enColorTemp].u32RedGain = data->u32RedGain;
+    colorTempValue[enColorTemp].u32GreenGain = data->u32GreenGain;
+    colorTempValue[enColorTemp].u32BlueGain = data->u32BlueGain;
+    colorTempValue[enColorTemp].u32RedOffset = data->u32RedOffset;
+    colorTempValue[enColorTemp].u32GreenOffset = data->u32GreenOffset;
+    colorTempValue[enColorTemp].u32BlueOffset = data->u32BlueOffset;
+    colorTempValue[enColorTemp].u32CrcValue = XbhCrc::calCrc16By8005((XBH_U8 *)&colorTempValue[enColorTemp], sizeof(XBH_GAIN_OFFSET_H610_DATA_S) - sizeof(XBH_U32));
+    XLOGD("colorTempValue[%d].u32CrcValue = 0x%x\n", enColorTemp, colorTempValue[enColorTemp].u32CrcValue);
+    // Write data to cusdata partition
+    s32Ret = XbhPartitionData::getInstance()->writeDataToCusdata(XBH_CUSDATA_H610_COLORTEMP_DATA_OFFSET, XBH_CUSDATA_H610_COLORTEMP_DATA_LEN, (XBH_CHAR *)colorTempValue);
+    if (s32Ret != XBH_SUCCESS)
+    {
+        XLOGE("Error! saveColorTempPara writeDataToCusdata fail, ret = %d\n", s32Ret);
+        return XBH_FAILURE;
+    }
+    return  s32Ret;
+}
+
+/**
+ * 读取对应模式的具体色温数据，从cusdata分区读取
+ * param[in] enColorTemp. 色温模式
+ * param[out] data. 色温参数 ,范围0~511
+ * retval 0:success,-1:failure
+*/
+XBH_S32 XbhHi_610::loadColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    XBH_U32 u32Crc16Value = 0xff;
+    XBH_GAIN_OFFSET_H610_DATA_S colorTempValue[XBH_COLORTEMP_BUTT];
+
+    //Confirm the input param
+    if (enColorTemp >= XBH_COLORTEMP_BUTT)
+    {
+        XLOGE("Error! loadColorTempPara fail, enColorTemp = %d\n", enColorTemp);
+        return XBH_FAILURE;
+    }
+    if (data == NULL)
+    {
+        XLOGE("Error! loadColorTempPara data is null\n");
+        return XBH_FAILURE;
+    }
+
+    //Get data from cusdata partition
+    memset(colorTempValue, 0, sizeof(colorTempValue));
+    s32Ret = XbhPartitionData::getInstance()->readDataFromCusdata(XBH_CUSDATA_H610_COLORTEMP_DATA_OFFSET, XBH_CUSDATA_H610_COLORTEMP_DATA_LEN, (XBH_CHAR *)colorTempValue);
+    if (s32Ret != XBH_SUCCESS)
+    {
+        XLOGE("Error! loadColorTempPara readDataFromCusdata fail, ret = %d\n", s32Ret);
+        //return XBH_FAILURE;
+        goto hisiData;
+    }
+    //Confirm the crc16 value
+    u32Crc16Value = XbhCrc::calCrc16By8005((XBH_U8 *)&colorTempValue[enColorTemp], sizeof(XBH_GAIN_OFFSET_H610_DATA_S) - sizeof(XBH_U32));
+    if (colorTempValue[enColorTemp].u32CrcValue != u32Crc16Value)
+    {
+        XLOGE("loadColorTempPara check crc16 value fail.\n");
+        XLOGE("u32Crc16Value: 0x%x\n", u32Crc16Value);
+        XLOGE("u32FlashCrc16Value: 0x%x\n", colorTempValue[enColorTemp].u32CrcValue);
+        //return XBH_FAILURE;
+        goto hisiData;
+    }
+    else
+    {
+        // For debug
+        //XLOGD("loadColorTempPara crc ok! u32Crc16Value: 0x%x\n", u32Crc16Value);
+    }
+    // Crc can not calculate all zero value. But all zero is in issue in color temp
+    if (colorTempValue[enColorTemp].u32RedGain == 0
+            && colorTempValue[enColorTemp].u32GreenGain == 0
+            && colorTempValue[enColorTemp].u32GreenGain == 0
+            && colorTempValue[enColorTemp].u32RedOffset == 0
+            && colorTempValue[enColorTemp].u32GreenOffset == 0
+            && colorTempValue[enColorTemp].u32BlueOffset == 0)
+    {
+        XLOGI("The color temp in cusdata is all zero. It is not vaild data.\n");
+        //return XBH_FAILURE;
+        goto hisiData;
+    }
+    //Copy data to interface
+    XLOGI("Load colortemp from cusdata.\n");
+    data->u32RedGain = colorTempValue[enColorTemp].u32RedGain;
+    data->u32GreenGain = colorTempValue[enColorTemp].u32GreenGain;
+    data->u32BlueGain = colorTempValue[enColorTemp].u32BlueGain;
+    data->u32RedOffset = colorTempValue[enColorTemp].u32RedOffset;
+    data->u32GreenOffset = colorTempValue[enColorTemp].u32GreenOffset;
+    data->u32BlueOffset = colorTempValue[enColorTemp].u32BlueOffset;
+    return  s32Ret;
+
+hisiData:
+    Array<XBH_S32> hisiColorTempArray;
+    if (enColorTemp == XBH_COLORTEMP_STANDARD)
+    {
+        hisiColorTempArray = HiCfgFact::Get()->ParseIntArray("databasedef:FacColorTemp_hdmi_4K_nature");
+    }
+    else if(enColorTemp == XBH_COLORTEMP_WARM)
+    {
+        hisiColorTempArray = HiCfgFact::Get()->ParseIntArray("databasedef:FacColorTemp_hdmi_4K_warm");
+    }
+    else if (enColorTemp == XBH_COLORTEMP_COLD)
+    {
+        hisiColorTempArray = HiCfgFact::Get()->ParseIntArray("databasedef:FacColorTemp_hdmi_4K_cool");
+    }
+    else if (enColorTemp == XBH_COLORTEMP_USER)
+    {
+        hisiColorTempArray = HiCfgFact::Get()->ParseIntArray("databasedef:FacColorTemp_hdmi_4K_user");
+    }
+    else
+    {
+        hisiColorTempArray = HiCfgFact::Get()->ParseIntArray("databasedef:FacColorTemp_hdmi_4K_nature");
+    }
+    if (hisiColorTempArray.length() != 6)
+    {
+        XLOGE("Error! Read color temp from hisi fail\n");
+        return XBH_FAILURE;
+    }
+    XLOGI("Load colortemp from hisi db.ini.\n");
+    data->u32RedGain = hisiColorTempArray[0];
+    data->u32GreenGain = hisiColorTempArray[1];
+    data->u32BlueGain = hisiColorTempArray[2];
+    data->u32RedOffset = hisiColorTempArray[3];
+    data->u32GreenOffset = hisiColorTempArray[4];
+    data->u32BlueOffset = hisiColorTempArray[5];
+
+    return  XBH_SUCCESS;
 }
 
 /**
@@ -3078,6 +3249,83 @@ XBH_S32 XbhHi_610::getBurnFactorySN(XBH_MATERAL_TYPE materialType,  XBH_CHAR* sn
     return  s32Ret;
 }
 
+XBH_S32 XbhHi_610::setHdmiHPD(int portId, XBH_LEVEL_E level)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    XBH_BOOL hpdLevel = XBH_FALSE;
+    switch(level)
+    {
+        case XBH_LEVEL_HIGH:
+            hpdLevel = XBH_TRUE;
+            break;
+        case XBH_LEVEL_LOW:
+            hpdLevel = XBH_FALSE;
+            break;
+        default:
+            XLOGE("Hpd level invalid");
+            s32Ret = XBH_FAILURE;
+            break;
+    }
+
+    if(s32Ret == XBH_FAILURE)
+    {
+        XLOGE("Hpd level invalid, ready return");
+        return s32Ret;
+    }
+
+    switch(portId)
+    {
+        case H610_HDMIRX_0_PORT_ID:
+            s32Ret = uapi_hdmirx_set_hpd_value(UAPI_HDMIRX_PORT0, (td_bool)hpdLevel);
+            break;
+        case H610_HDMIRX_1_PORT_ID:
+            s32Ret = uapi_hdmirx_set_hpd_value(UAPI_HDMIRX_PORT1, (td_bool)hpdLevel);
+            break;
+        case H610_HDMIRX_2_PORT_ID:
+            s32Ret = uapi_hdmirx_set_hpd_value(UAPI_HDMIRX_PORT2, (td_bool)hpdLevel);
+            break;
+        default:
+            XLOGE("Hdmi port id invalid");
+            s32Ret = XBH_FAILURE;
+            break;
+    }
+
+    return s32Ret;
+}
+
+//override
+XBH_S32 XbhHi_610::getSecurityHvbKeyStatus(XBH_U32 *u32Status)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    uapi_otp_asymmetric_key_type key_type = UAPI_OTP_ASYMMETRIC_KEY_ECC;
+    td_bool status = TD_FALSE;
+    td_bool stat = TD_FALSE;
+    s32Ret = uapi_otp_get_asymmetric_key_lock_stat(key_type, &status);
+    XLOGD("%s,%d,uapi_otp_get_asymmetric_key_lock_stat s32Ret = %d, status = %d\n",
+            __FUNCTION__,__LINE__,s32Ret,status);
+    s32Ret |= uapi_otp_get_scs_stat(&stat);
+    XLOGD("%s,%d,uapi_otp_get_scs_stat s32Ret = %d, stat = %d\n",
+            __FUNCTION__,__LINE__,s32Ret,stat);
+    if (status == TD_TRUE && stat == TD_TRUE)
+    {
+        *u32Status = XBH_TRUE;
+    }
+    else
+    {
+        *u32Status = XBH_FALSE;
+    }
+    return  s32Ret;
+}
+
+//override
+XBH_S32 XbhHi_610::upgradeSystemFirmware(XBH_BOOL* bEnable)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_BOOL enable = XBH_TRUE;
+    s32Ret = XbhPartitionData::getInstance()->setUpgradeSystemFlag(&enable);
+    *bEnable = XBH_TRUE;
+    return  s32Ret;
+}
 
 // 读取文件内容工具函数
 std::string readFileContent(const std::string& path) 
@@ -3441,6 +3689,73 @@ XBH_S32 XbhHi_610::getHallSensorValue(XBH_S32* s32Value)
     return s32Ret;
 }
 
+XBH_S32 XbhHi_610::getEmmcVersion(XBH_U32 *pu32Version)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    std::string value;
+    XBH_CHAR* endPtr = nullptr;
+
+    // 读取EMMC版本信息
+    XbhSysOpt::getInstance()->readSysfs("/sys/class/mmc_host/mmc0/mmc0:0001/rev", value);
+
+    if (value.empty())
+    {
+        s32Ret = XBH_FAILURE;
+        *pu32Version = 0;
+        return s32Ret;
+    }
+
+    XBH_ULONG Version = 0;
+    size_t verPos = value.find("0x");
+    if (verPos != std::string::npos) {
+        Version = strtoul(value.c_str() + verPos + 2, &endPtr, 16);
+    }
+    *pu32Version = static_cast<XBH_U32>(Version);
+    XLOGD("getEmmcVersion: 0x%x\n", *pu32Version);
+    return s32Ret;
+}
+
+XBH_S32 XbhHi_610::getEmmcLifeTime(XBH_U32 *pu32LifeTime)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    std::string value;
+    XBH_CHAR* endPtr = nullptr;
+
+    // 读取EMMC寿命信息
+    XbhSysOpt::getInstance()->readSysfs("/sys/class/mmc_host/mmc0/mmc0:0001/life_time", value);
+
+    if (value.empty())
+    {
+        s32Ret = XBH_FAILURE;
+        *pu32LifeTime = 0;
+        return s32Ret;
+    }
+
+    // 解析两个16进制值（MLC和SLC）
+    XBH_ULONG mlcLife = 0;
+    XBH_ULONG slcLife = 0;
+
+    // 查找第一个0x前缀
+    size_t slcPos = value.find("0x");
+    if (slcPos != std::string::npos) {
+        slcLife = strtoul(value.c_str() + slcPos + 2, &endPtr, 16);
+    }
+
+    // 查找第二个0x前缀
+    size_t mlcPos = value.find("0x", mlcPos + 1);
+    if (mlcPos != std::string::npos) {
+        mlcLife = strtoul(value.c_str() + mlcPos + 2, &endPtr, 16);
+    }
+
+    // 取两者中的最大值
+    *pu32LifeTime = static_cast<XBH_U32>(std::max(mlcLife, slcLife));
+
+    XLOGD("getEmmcLifeTime: MLC=0x%lx SLC=0x%lx Max=0x%x",
+          mlcLife, slcLife, *pu32LifeTime);
+    return s32Ret;
+}
+
+
 XbhHi_610::XbhHi_610()
 {
     XLOGD(" begin ");
@@ -3471,7 +3786,12 @@ XbhHi_610::XbhHi_610()
     } else {
         m_uapi_hdmirx_init_ok = XBH_TRUE;
     }
-    
+    /*H610 uapi disp component initial*/
+    if (uapi_disp_init() != TD_SUCCESS)
+    {
+        XLOGE("uapi_disp_init fail, ErrorCode=0x%x\n", uapi_disp_init());
+    }
+
     mIsProjectIdChange = XBH_FALSE;
     XbhPartitionData::getInstance()->setDataPath(MSDC_CUSDATA_PATH, MSDC_CUSPARAM_PATH);
     XBH_CHAR strProjectId[XBH_CUSDATA_PROJECT_ID_LEN] = {0};
@@ -3539,6 +3859,27 @@ XbhHi_610::XbhHi_610()
     if (ret != TD_SUCCESS)
     {
         XLOGE("uapi_lsadc_set_config fail, ErrorCode=0x%x\n", ret);
+    }
+
+    ret = uapi_pq_init(PQ_BIN_PATH);
+    if (ret == TD_SUCCESS)
+    {
+        XLOGD("uapi_pq_init successed !");
+    }
+    else
+    {
+        XLOGD("uapi_pq_init failed! ret: 0x%x", ret);
+    }
+
+    //hisi init otp service
+    ret = uapi_otp_init();
+    if (ret != TD_SUCCESS)
+    {
+        XLOGE("uapi_otp_init fail, ErrorCode=0x%x\n", ret);
+    }
+    else
+    {
+        XLOGD("uapi_otp_init success!\n");
     }
 
     //init consoles

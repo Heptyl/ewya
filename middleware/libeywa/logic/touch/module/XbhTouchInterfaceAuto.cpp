@@ -37,6 +37,7 @@
 #include "XbhTouchLangoUsb_K2.h"
 #include "XbhTouchIsolutionUart_G.h"
 #include "XbhTouchIsolutionXSdk.h"
+#include "XbhTouchTimeLinkH3Sdk.h"
 
 XbhTouchInterfaceAuto*               XbhTouchInterfaceAuto::mInstance = XBH_NULL;
 XbhMutex                             XbhTouchInterfaceAuto::mLockObject;
@@ -98,6 +99,7 @@ autoMatchTouchNode autoMatchTouchList[]
     {0x2fe9,        0x0228,         0x2fe9,        0xa228,          XBH_TP_IF_USB_CTRL,       0,          1,         "",                       "HE-SQ-SKY75"},      //39
     {0x2fe9,        0x0328,         0x2fe9,        0xa328,          XBH_TP_IF_USB_CTRL,       0,          1,         "",                       "HE-SQ-SKY86"},      //40
     {0x28e1,        0xb101,         0x28e1,        0xb006,          XBH_TP_IF_SDK_CTRL,       0,          1,         "",                       "IstTouch-X-610a"},  //41
+    {0x0d48,        0x001d,         0x0d48,        0x001b,          XBH_TP_IF_SDK_CTRL,       0,          1,         "",                       "TIMELINK_H3"},      //42
 };
 
 /*
@@ -183,6 +185,9 @@ XBH_S32 XbhTouchInterfaceAuto::getTouchInterface(void)
             break;
         case 41:
             m_pXbhTouchInterfaceAuto = (XbhTouchInterface *)XbhTouchIsolutionXSdk::getInstance(autoMatchTouchList[matchID].ko, autoMatchTouchList[matchID].name);
+            break;
+        case 42:
+            m_pXbhTouchInterfaceAuto = (XbhTouchInterface *)XbhTouchTimeLinkH3Sdk::getInstance(autoMatchTouchList[matchID].ko, autoMatchTouchList[matchID].name);
             break;
          default:
              XLOGE("unKnow Touch!!!");
@@ -291,6 +296,24 @@ XBH_S32 XbhTouchInterfaceAuto::setTouchScaleRect(XBH_S32 resolution, XBH_S32 x, 
         XLOGE("m_pXbhTouchInterfaceAuto is NULL");
     }
     XLOGD("setTouchScaleRect resolution = %d x = %d y = %d w = %d h = %d , ret = %d", resolution, x, y, w, h, ret);
+    return ret;
+}
+
+/**
+ * 设置触摸缩放区域
+ */
+XBH_S32 XbhTouchInterfaceAuto::setTouchScalingRegion(XBH_S32 resolution, XBH_S32 x, XBH_S32 y, XBH_S32 w, XBH_S32 h)
+{
+    XBH_S32 ret = XBH_FAILURE;
+    if(m_pXbhTouchInterfaceAuto != NULL)
+    {
+        ret = m_pXbhTouchInterfaceAuto->setTouchScalingRegion(resolution, x, y, w, h);
+    }
+    else
+    {
+        XLOGE("m_pXbhTouchInterfaceAuto is NULL");
+    }
+    XLOGD("setTouchScalingRegion resolution = %d x = %d y = %d w = %d h = %d , ret = %d", resolution, x, y, w, h, ret);
     return ret;
 }
 
@@ -538,6 +561,19 @@ XBH_S32 XbhTouchInterfaceAuto::Init(XBH_VOID)
     XBH_S32 ret =  XBH_FAILURE;
     XBH_S32 mForceID;
     XBH_CHAR value[PROPERTY_VALUE_MAX] = {0};
+
+    // 存放触摸框Android USB PID/VID的默认值 0x00, 以区分未设置值0xffff
+    ret = property_set("persist.vendor.xbh.bezel.an.pid", "0x00");
+    if (ret)
+    {
+        XLOGE("set persist.vendor.xbh.bezel.an.pid 0x00 failed, ret = %d", ret);
+    }
+
+    ret = property_set("persist.vendor.xbh.bezel.an.vid", "0x00");
+    if (ret)
+    {
+        XLOGE("set persist.vendor.xbh.bezel.an.vid 0x00 failed, ret = %d", ret);
+    }
 
     if(getAllUsbDevices() == XBH_SUCCESS)
     {

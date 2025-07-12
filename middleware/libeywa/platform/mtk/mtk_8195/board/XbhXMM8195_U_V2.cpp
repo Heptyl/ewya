@@ -23,9 +23,110 @@ XbhXMM8195_U_V2           *XbhXMM8195_U_V2::mInstance = XBH_NULL;
 XbhMutex                  XbhXMM8195_U_V2::mLock;
 
 
-#define RTK8367RB_VB_WOL_DEV            "/sys/devices/virtual/rtl8367rb/phy/wol"
+#define RTK8367_WOL_DEV                 "/proc/rtk_gsw/wol"
 #define HDMI_RX_EDID                    "/sys/class/hdmirxswitch/hdmi/switch_edid"
 #define XBH_HAL_CHECK_SIGNAL    "vendor.xbh.hal_check_signal"
+#define ETH0_READY_STATUS_PATH    "/sys/class/net/eth0/operstate"
+
+XBH_BOOL XbhXMM8195_U_V2::GetEth0ReadyStatus(XBH_S32 *pbEnable)
+{
+    XBH_S32 fd  = -1;
+    XBH_S32 ret = XBH_FAILURE;
+    XBH_CHAR state[2] = {0};
+    fd  = open(ETH0_READY_STATUS_PATH, O_RDONLY);
+    if(fd < 0)
+    {
+       XLOGE("GetEth0ReadyStatus: open %s failed !!!!\n", ETH0_READY_STATUS_PATH);
+       return XBH_FAILURE;
+    }
+    ret = read(fd,state,2);
+
+    close(fd);
+
+    if (strcmp(state, "up") == 0)
+    {
+        *pbEnable = 1;
+    }
+    else
+    {
+        *pbEnable = 0;
+    }
+
+    return ret;
+}
+
+XBH_S32 XbhXMM8195_U_V2::initWOL()
+{
+    
+    int fd = open(RTK8367_WOL_DEV, O_WRONLY);
+    XBH_S32 s32Ret = XBH_FAILURE;
+
+    if (fd == -1)
+    {
+        XLOGE("open_wol dev error!!!\n");
+        return s32Ret;
+    }
+
+    s32Ret = write(fd, "init", 4);
+    if (s32Ret < 0)
+    {
+        XLOGE("initWOL: write init failed !!!!");
+    }
+    else
+    {
+        s32Ret = XBH_SUCCESS;
+    }
+    close(fd);
+    XLOGD("initWOL: ret = %d",s32Ret);
+    return s32Ret;
+}
+
+void* XbhXMM8195_U_V2::initWolTask(void* arg)
+{
+    XbhXMM8195_U_V2* self = static_cast<XbhXMM8195_U_V2*>(arg);
+    int i,ret;
+    XBH_S32 eth0_status = 0;
+    char sWolStatus[PROPERTY_VALUE_MAX];
+
+    XBH_BOOL wol_enable;
+
+    self->getWoTStatus(XBH_WAKEUP_ETH, &wol_enable);
+
+    do
+    {
+        ret = self->GetEth0ReadyStatus(&eth0_status);
+        if (ret < 0)
+        {
+            XLOGE("XbhXMM8195_U_V2 initWolTask() GetEth0ReadyStatus error!!! \n");
+        }
+        usleep(500 * 1000);
+
+    } while(!eth0_status);
+
+
+    usleep(500 * 1000);
+
+    for (i = 0; i < 4; i++) 
+    {
+        usleep(500 * 1000);
+            /*网络唤醒设置*/
+        property_get("persist.vendor.xbh.wol.enable", sWolStatus, "false");
+        XLOGE("initWolTask persist.vendor.xbh.wol.enable : %s \n",sWolStatus);
+        if(strncmp(sWolStatus, "true",4) == 0)
+        {
+            self->setWolEnable(XBH_TRUE);
+        }
+        else
+        {
+            self->setWolEnable(XBH_FALSE);
+        }
+        XLOGD("XbhXMM8195_U_V2 initWolTask() Done !!! \n");
+    }
+
+    return XBH_SUCCESS;
+}
+
+
 
 //------------------ static function begin -----------------------------
 //override
@@ -34,7 +135,10 @@ XBH_S32 XbhXMM8195_U_V2::getHdmi1Det(XBH_BOOL *enable)
     XBH_S32 s32Ret = XBH_FAILURE;
     XBH_U32 u32GpioValue;
     s32Ret = this->XbhMtk_8195::getGpioInputValue(XBH_BOARD_GPIO_HDMI_DET, &u32GpioValue);
-    *enable =  u32GpioValue == XBH_BOARD_GPIO_HDMI_DET_LEVEL ? XBH_TRUE : XBH_FALSE;
+    if(s32Ret == XBH_SUCCESS)
+    {
+        *enable =  u32GpioValue == XBH_BOARD_GPIO_HDMI_DET_LEVEL ? XBH_TRUE : XBH_FALSE;
+    }
     return s32Ret;
 }
 
@@ -44,7 +148,10 @@ XBH_S32 XbhXMM8195_U_V2::getFHdmi1Det(XBH_BOOL *enable)
     XBH_S32 s32Ret = XBH_FAILURE;
     XBH_U32 u32GpioValue;
     s32Ret = this->XbhMtk_8195::getGpioInputValue(XBH_BOARD_GPIO_FHDMI_DET, &u32GpioValue);
-    *enable =  u32GpioValue == XBH_BOARD_GPIO_FHDMI_DET_LEVEL ? XBH_TRUE : XBH_FALSE;
+    if(s32Ret == XBH_SUCCESS)
+    {
+        *enable =  u32GpioValue == XBH_BOARD_GPIO_FHDMI_DET_LEVEL ? XBH_TRUE : XBH_FALSE;
+    }
     return s32Ret;
 }
 
@@ -54,7 +161,10 @@ XBH_S32 XbhXMM8195_U_V2::getFUsbc1Det(XBH_BOOL *enable)
     XBH_S32 s32Ret = XBH_FAILURE;
     XBH_U32 u32GpioValue;
     s32Ret = this->XbhMtk_8195::getGpioInputValue(XBH_BOARD_GPIO_F_Type_C_DET, &u32GpioValue);
-    *enable =  u32GpioValue == XBH_BOARD_GPIO_F_USBC_DET_LEVEL ? XBH_TRUE : XBH_FALSE;
+    if(s32Ret == XBH_SUCCESS)
+    {
+       *enable =  u32GpioValue == XBH_BOARD_GPIO_F_USBC_DET_LEVEL ? XBH_TRUE : XBH_FALSE;
+    }
     return s32Ret;
 }
 
@@ -63,8 +173,11 @@ XBH_S32 XbhXMM8195_U_V2::getDP1Det(XBH_BOOL *enable)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
     XBH_U32 u32GpioValue;
-    s32Ret = this->XbhMtk_8195::getGpioInputValue(XBH_BOARD_GPIO_DPIN_DET, &u32GpioValue);
-    *enable =  u32GpioValue == XBH_BOARD_GPIO_DPIN_DET_LEVEL ? XBH_TRUE : XBH_FALSE;
+    s32Ret = this->XbhMtk_8195::getGpioInputValue(XBH_BOARD_GPIO_DPIN_DET, &u32GpioValue);    
+    if(s32Ret == XBH_SUCCESS)
+    {
+       *enable =  u32GpioValue == XBH_BOARD_GPIO_DPIN_DET_LEVEL ? XBH_TRUE : XBH_FALSE;
+    }
     return s32Ret;
 }
 
@@ -74,7 +187,10 @@ XBH_S32 XbhXMM8195_U_V2::getOps1Det(XBH_BOOL *enable)
     XBH_S32 s32Ret = XBH_FAILURE;
     XBH_U32 u32GpioValue;
     s32Ret = this->XbhMtk_8195::getGpioInputValue(XBH_BOARD_GPIO_OPS_PB_DET, &u32GpioValue);
-    *enable =  u32GpioValue == XBH_BOARD_GPIO_OPS_PB_DET_LEVEL ? XBH_TRUE : XBH_FALSE;
+    if(s32Ret == XBH_SUCCESS)
+    {
+         *enable =  u32GpioValue == XBH_BOARD_GPIO_OPS_PB_DET_LEVEL ? XBH_TRUE : XBH_FALSE;
+    }
     return s32Ret;
 }
 
@@ -106,14 +222,14 @@ XBH_S32 XbhXMM8195_U_V2::getOpsPowerStatus(XBH_BOOL *bEnable, XBH_SOURCE_E enSou
     if (enSource == XBH_SOURCE_OPS1)
     {
         s32Ret = this->XbhMtk_8195::getGpioInputValue(XBH_BOARD_GPIO_OPS_PWR_STATUS, &u32GpioValue);
-        *bEnable =  u32GpioValue == XBH_BOARD_GPIO_OPS_PWR_ON_LEVEL ? XBH_TRUE : XBH_FALSE;
+        if(s32Ret == XBH_SUCCESS)
+        {
+             *bEnable =  u32GpioValue == XBH_BOARD_GPIO_OPS_PWR_ON_LEVEL ? XBH_TRUE : XBH_FALSE;
+        }
     }
     return  s32Ret;
 }
 
-//TODO for hardware test
-static XBH_BOOL gOpsDetGpioValue = XBH_FALSE;
-//override
 XBH_S32 XbhXMM8195_U_V2::getOpsDetStatus(XBH_BOOL *bEnable, XBH_SOURCE_E enSource)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
@@ -121,15 +237,10 @@ XBH_S32 XbhXMM8195_U_V2::getOpsDetStatus(XBH_BOOL *bEnable, XBH_SOURCE_E enSourc
     if (enSource == XBH_SOURCE_OPS1)
     {
         s32Ret = this->XbhMtk_8195::getGpioInputValue(XBH_BOARD_GPIO_OPS_PB_DET, &u32GpioValue);
-	if (gOpsDetGpioValue != u32GpioValue)
+        if(s32Ret == XBH_SUCCESS)
         {
-            XLOGE("Fixed me! 1: s32Ret = %d, gOpsDetGpioValue = %d, u32GpioValue = %d\n", s32Ret, gOpsDetGpioValue, u32GpioValue);
-            usleep(300 * 1000);
-            s32Ret = this->XbhMtk_8195::getGpioInputValue(XBH_BOARD_GPIO_OPS_PB_DET, &u32GpioValue);
-            XLOGE("Fixed me! 2: s32Ret = %d, gOpsDetGpioValue = %d, u32GpioValue = %d\n", s32Ret, gOpsDetGpioValue, u32GpioValue);
-            gOpsDetGpioValue = u32GpioValue;
+            *bEnable =  u32GpioValue == XBH_BOARD_GPIO_OPS_PB_DET_LEVEL ? XBH_TRUE : XBH_FALSE;
         }
-        *bEnable =  u32GpioValue == XBH_BOARD_GPIO_OPS_PB_DET_LEVEL ? XBH_TRUE : XBH_FALSE;
     }
     return  s32Ret;
 }
@@ -320,6 +431,13 @@ XBH_S32 XbhXMM8195_U_V2::getPoweronMode(XBH_POWERMODE_E *enMode)
 XBH_S32 XbhXMM8195_U_V2::setBass(XBH_S32 s32Value)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_BOOL isLineOutConnected = XBH_FALSE;
+    getHpDetectStatus(&isLineOutConnected);
+    if (mAudioOutput ==  XBH_AUDIO_OUTPUT_ARC || isLineOutConnected)
+    {
+       XLOGD("setBass only for speaker, return fail when ARC/LineOut connected");
+       return s32Ret;
+    }
     s32Ret = XbhAudioAmplifierManager::getInstance()->setBass(s32Value);
     return  s32Ret;
 }
@@ -348,6 +466,13 @@ XBH_S32 XbhXMM8195_U_V2::getBass(XBH_S32 *s32Value)
 XBH_S32 XbhXMM8195_U_V2::setTreble(XBH_S32 s32Value)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_BOOL isLineOutConnected = XBH_FALSE;
+    getHpDetectStatus(&isLineOutConnected);
+    if (mAudioOutput ==  XBH_AUDIO_OUTPUT_ARC  || isLineOutConnected)
+    {
+       XLOGD("setTreble only for speaker, return fail when ARC/LineOut connected");
+       return s32Ret;
+    }
     s32Ret = XbhAudioAmplifierManager::getInstance()->setTreble(s32Value);
     return  s32Ret;
 }
@@ -376,6 +501,13 @@ XBH_S32 XbhXMM8195_U_V2::getTreble(XBH_S32 *s32Value)
 XBH_S32 XbhXMM8195_U_V2::setBalance(XBH_S32 s32Value)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_BOOL isLineOutConnected = XBH_FALSE;
+    getHpDetectStatus(&isLineOutConnected);
+    if (mAudioOutput ==  XBH_AUDIO_OUTPUT_ARC  || isLineOutConnected)
+    {
+       XLOGD("setBalance only for speaker, return fail when ARC/LineOut connected");
+       return s32Ret;
+    }
     s32Ret = XbhAudioAmplifierManager::getInstance()->setBalance(s32Value);
     return  s32Ret;
 }
@@ -603,6 +735,10 @@ XBH_S32 XbhXMM8195_U_V2::getExtendIcVer(XBH_S32 devType, XBH_CHAR* ver)
     XBH_S32 s32Ret = XBH_FAILURE;
     switch(devType)
     {
+        case XBH_UPDATE_AUDIO_CODEC:
+            s32Ret = XbhAudioCodecManager::getInstance()->getFirmwareVersion(ver);
+            XLOGD("YANDONG getExtendIcVer : %s\n", ver);
+            break;
         case XBH_UPDATE_BOARD_DEV6563_1:
             s32Ret = XbhDp2HdmiManager::getInstance()->getFirmwareVersion(XBH_SOURCE_DP1, ver);
             break;
@@ -647,6 +783,9 @@ XBH_S32 XbhXMM8195_U_V2::upgradeExtendIc(const XBH_CHAR* filename, XBH_BOOL forc
         case XBH_UPDATE_FRONT_GSV2712:
             s32Ret = XbhHdmiSwitchManager::getInstance()->upgradeFirmware(XBH_UPDATE_FRONT_GSV2712, filename, force);
             break;
+        case XBH_UPDATE_CS5803AQ:
+            s32Ret = XbhAVOutManager::getInstance()->upgradeFirmware(XBH_UPDATE_CS5803AQ, filename, force);
+            break;
 
         default:
             s32Ret = XBH_FAILURE;
@@ -675,6 +814,8 @@ XBH_S32 XbhXMM8195_U_V2::getUpgradeExtIcState(XBH_S32 devType, XBH_S32* s32Value
         case XBH_UPDATE_FRONT_GSV2712:
             s32Ret = XbhHdmiSwitchManager::getInstance()->getUpgradeState(XBH_UPDATE_FRONT_GSV2712, s32Value);
             break;
+        case XBH_UPDATE_CS5803AQ:
+            s32Ret = XbhAVOutManager::getInstance()->getUpgradeState(XBH_UPDATE_CS5803AQ, s32Value);
             break;
         default:
             s32Ret = XBH_FAILURE;
@@ -684,27 +825,18 @@ XBH_S32 XbhXMM8195_U_V2::getUpgradeExtIcState(XBH_S32 devType, XBH_S32* s32Value
 
 XBH_S32 XbhXMM8195_U_V2::setWolEnable(XBH_BOOL bEnable)
 {
-    int fd = open(RTK8367RB_VB_WOL_DEV, O_WRONLY);
+    int fd = open(RTK8367_WOL_DEV, O_WRONLY);
     XBH_S32 s32Ret = XBH_FAILURE;
-    XBH_CHAR mac_addr[17] = {0};
-    getMacAddress(0, mac_addr);
+    XBH_CHAR mac_addr[17];
     if (bEnable)
     {
         if (fd == -1)
         {
-            XLOGE(" YANDONG open_wol dev error!!!\n");
+            XLOGE("open_wol dev error!!!\n");
             return s32Ret;
         }
-        //1，初始化
-        XLOGD("write wol init\n");
-        s32Ret = write(fd, "init", sizeof("init"));
-        if (s32Ret < 0)
-        {
-            XLOGE("write wol init dev error!!!\n");
-        }
-        //2，写入MAC地址
+
         getMacAddress(0, mac_addr);
-        XLOGD("write mac:%s\n",mac_addr);
         s32Ret = write(fd, mac_addr, 17);
         if (s32Ret < 0)
         {
@@ -766,10 +898,30 @@ XBH_S32 XbhXMM8195_U_V2::setOnStop()
     #if defined(XBH_FUNC_MCU_I2C_NUM) && defined(XBH_FUNC_MCU_I2C_ADDR)
     char sWolStatus[PROPERTY_VALUE_MAX] = {0};
     XBH_BOOL wot_enable;
+    s32Ret = setGpioOutputValue(XBH_BOARD_GPIO_PANEL_BLON,!XBH_BOARD_GPIO_PANEL_BLON_ON);//关闭Backlight_VCC
     s32Ret = getWoTStatus(XBH_WAKEUP_FTYPEC, &wot_enable);
-    if(wot_enable) {
+    if(wot_enable)
+    {
         XbhHdmiSwitchManager::getInstance()->setSpecificMode(XBH_UPDATE_FRONT_GSV2712);
     }
+
+    // XBH_BOOL wol_enable;
+    // s32Ret = getWoTStatus(XBH_WAKEUP_FTYPEC, &wol_enable);
+    // if(wol_enable)
+    // {
+    //    property_set("persist.vendor.xbh.wol.enable", "true");
+    // }
+    // //     /*网络唤醒设置*/
+    // // property_get("persist.vendor.xbh.wol.enable", sWolStatus, "false");
+    // // XLOGE("YANDONG persist.vendor.xbh.wol.enable : %s \n",sWolStatus);
+    // // if(strncmp(sWolStatus, "true",4) == 0)
+    // // {
+    // //     setWolEnable(XBH_TRUE);
+    // // }
+    // // else
+    // // {
+    // //     setWolEnable(XBH_FALSE);
+    // // }
 
     XBH_MCU_I2CBUFFDEF_S pI2cBuff;
     XLOGD("---- onStop ----");
@@ -780,44 +932,17 @@ XBH_S32 XbhXMM8195_U_V2::setOnStop()
     setGpioOutputValue(XBH_BOARD_GPIO_AMP_EN,XBH_BOARD_GPIO_AMP_EN_OFF);//关闭AMP PVDD
     setGpioOutputValue(XBH_BOARD_GPIO_USB_SW_C_EN,XBH_BOARD_GPIO_LOW);//关闭USB3.0 switch使能
     setGpioOutputValue(XBH_BOARD_GPIO_F_USBC_DET,!XBH_BOARD_GPIO_F_USBC_DET_LEVEL);//关闭前置板Typec插入检测脚
-    setGpioOutputValue(XBH_BOARD_GPIO_LCD_CHIP_POWER,!XBH_BOARD_GPIO_LCD_CHIP_POWER_ON);//关闭cs5803供电脚
     /*通知MCU SOC已待机*/
     pI2cBuff.cmd = CMD_I2C_SOC_POWER_MODE;
     pI2cBuff.len = 1;
     pI2cBuff.data[0] = 0XFE; // 待机
     s32Ret = setIICData(XBH_FUNC_MCU_I2C_NUM, XBH_FUNC_MCU_I2C_ADDR, pI2cBuff.cmd, 0x01, pI2cBuff.len, pI2cBuff.data);
     #endif
-    /*网络唤醒设置*/
-    property_get("persist.vendor.xbh.wol.enable", sWolStatus, "false");
-    XLOGE("YANDONG persist.vendor.xbh.wol.enable : %s \n",sWolStatus);
-    if(strncmp(sWolStatus, "true",4) == 0) {
-        setWolEnable(XBH_TRUE);
-    } else {
-        setWolEnable(XBH_FALSE);
-    }
-
+    usleep(110*1000);//T4(关机时Backlight_VCC->DATA)要求大于100ms
+    s32Ret = setGpioOutputValue(XBH_BOARD_GPIO_LCD_CHIP_POWER,!XBH_BOARD_GPIO_LCD_CHIP_POWER_ON);//关闭cs5803供电脚
     return  s32Ret;
 }
 
-//override
-XBH_S32 XbhXMM8195_U_V2::setARCEnable(XBH_BOOL bEnable)
-{
-      XBH_S32 s32Ret = XBH_SUCCESS;
-      XLOGD("setARCEnable :%d, speaker mute:%s", bEnable, bEnable?"off":"on");
-
-      if (bEnable)
-      {
-          setGpioOutputValue(XBH_BOARD_GPIO_DISPLAY_ARCSPIDF_SW, XBH_BOARD_GPIO_DISPLAY_ARCSPIDF_SW_ARC);
-          setMute(XBH_AUDIO_CHANNEL_SPEAKER, XBH_TRUE);
-      }
-      else
-      {
-          setGpioOutputValue(XBH_BOARD_GPIO_DISPLAY_ARCSPIDF_SW, XBH_BOARD_GPIO_DISPLAY_ARCSPIDF_SW_SPIDF);
-          setMute(XBH_AUDIO_CHANNEL_SPEAKER, XBH_FALSE);
-      }
-
-      return s32Ret;
-}
 
 XBH_S32 XbhXMM8195_U_V2::setCecEnable(XBH_BOOL enable) {
     XBH_S32 s32Ret = XBH_FAILURE;
@@ -876,10 +1001,18 @@ XBH_S32 XbhXMM8195_U_V2::setWoTStatus(XBH_WAKEUP_E enWakeUpType, XBH_BOOL bEnabl
             if(bEnable)
             {
                 property_set("persist.vendor.xbh.wol.enable", "true");
+                pthread_t initWolTaskTid;
+                if (pthread_create(&initWolTaskTid, XBH_NULL, initWolTask, this) != XBH_SUCCESS)
+                {
+                    XLOGE("initWolTask Thread creation failed");
+                } else {
+                    XLOGD("initWolTask create success");
+                }
             }
             else
             {
                 property_set("persist.vendor.xbh.wol.enable", "false");
+                setWolEnable(XBH_FALSE);
             }
         break;
         default:
@@ -910,8 +1043,11 @@ XBH_S32 XbhXMM8195_U_V2::getWoTStatus(XBH_WAKEUP_E enWakeUpType, XBH_BOOL* bEnab
             s32Ret = getIICData(XBH_FUNC_MCU_I2C_NUM, XBH_FUNC_MCU_I2C_ADDR, CMD_I2C_GET_WAKEUP_NFC, 1, 1, pu8Data);
         break;
         case XBH_WAKEUP_ETH:
-            s32Ret = getIICData(XBH_FUNC_MCU_I2C_NUM, XBH_FUNC_MCU_I2C_ADDR, CMD_I2C_GET_WAKEUP_WOL, 1, 1, pu8Data);
-        break;
+            {
+                bool propEnable = property_get_bool("persist.vendor.xbh.wol.enable", false);
+                pu8Data[0] = propEnable ? 1 : 0;
+            }
+            break;
         default:
             XLOGE("no type!");
         break;
@@ -1014,6 +1150,55 @@ XBH_S32 XbhXMM8195_U_V2::initProjectIdConfig()
     return s32Ret;
 }
 #endif
+
+XBH_S32 XbhXMM8195_U_V2::getEthPortSpeed(XBH_S32 port, XBH_S32* value)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_CHAR buf[32];
+    std :: string result;
+
+    // 中间件端口是从0开始计数，这里是从1开始计数，对此做一个转换
+    port += 1;
+    
+    memset(buf, 0, sizeof(buf));
+    snprintf(buf, sizeof(buf), "%d", port);
+    XbhSysOpt::getInstance()->writeSysfs("/proc/rtk_gsw/port_status", buf);
+    XbhSysOpt::getInstance()->readSysfs("/proc/rtk_gsw/port_status", result);
+    
+    if (!result.empty())
+    {
+        XLOGD("%s: %d result:%s!\n", __FUNCTION__, __LINE__, result.c_str());
+        if (sscanf(result.c_str(), "%d_%s", value, &buf) == 2)
+        {
+            s32Ret = XBH_SUCCESS;
+        }
+    }
+    
+    return s32Ret;
+}
+
+XBH_S32 XbhXMM8195_U_V2::setSn(const XBH_CHAR* strSn)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    s32Ret = XbhPartitionData::getInstance()->setSn(strSn);
+    if (s32Ret == XBH_SUCCESS)
+    {
+        property_set("vendor.xbh.rkp.serialno", strSn);
+    }
+    /*设置标志位，判断标志为true 在线程里执行。直接执行setNvramValue 可能存在等待阻塞，异步在线程里写SN*/
+    mIsSetEnabled = true;
+    XbhMWThread::run(XbhMWThread::ONCE);
+    return  s32Ret;
+}
+
+XBH_S32 XbhXMM8195_U_V2::getSn(XBH_CHAR* strSn)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    s32Ret  = XbhPartitionData::getInstance()->getSn(strSn);
+    /*getNvramValue 可能存在等待阻塞，不用获取里面sn号*/
+    //s32Ret = getNvramValue(BARCODE_OFFSET, BARCODE_LEN, (XBH_VOID*)strSn);
+    return s32Ret;
+}
 //------------------ static function end -----------------------------
 
 
@@ -1032,6 +1217,16 @@ XbhXMM8195_U_V2::XbhXMM8195_U_V2()
     #ifdef XBH_USE_HAL_API_TO_CHECK_SIGNAL_STATUS
     property_set(XBH_HAL_CHECK_SIGNAL, "true");
     #endif
+
+    pthread_t initWolTaskTid;
+
+    if (pthread_create(&initWolTaskTid, XBH_NULL, initWolTask, this) != XBH_SUCCESS)
+    {
+        XLOGE("initWolTask Thread creation failed");
+    } else {
+        XLOGD("initWolTask create success");
+    }
+
     XLOGD(" end ");
 }
 
@@ -1050,4 +1245,18 @@ XbhXMM8195_U_V2 *XbhXMM8195_U_V2::getInstance()
         }
     }
     return mInstance;
+}
+
+void XbhXMM8195_U_V2::run(const void *arg)
+{
+    //异步去调用写SN.
+    if (mIsSetEnabled)
+    { 
+        XBH_CHAR propVal[PROPERTY_VALUE_MAX] = {0};
+        if (property_get("vendor.xbh.rkp.serialno", propVal, "") > 0)
+        {
+            XbhMtk_8195::updateNvmStr(propVal);
+        }
+        mIsSetEnabled = false;
+    }
 }

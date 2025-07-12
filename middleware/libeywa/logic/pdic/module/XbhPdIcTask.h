@@ -34,7 +34,7 @@ public:
     /**
      * 获取chip是否初始化完成
     */
-    XBH_S32 getChipInitDone(XBH_S32 devType, XBH_BOOL* enable);
+    XBH_S32 getChipInitDone(XBH_BOOL* enable);
     /**
      * 获取chip是否存在
     */
@@ -56,6 +56,7 @@ private:
 
     XBH_U8 mList1[8];
     COMMON_OPT_TABLE mList2[8];
+    XBH_BOOL minitdone;
 };
 
 #endif //XBH_PD_IC_TASK_H

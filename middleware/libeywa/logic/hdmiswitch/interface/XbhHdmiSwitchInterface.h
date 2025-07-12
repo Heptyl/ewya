@@ -123,6 +123,11 @@ public:
      */
     virtual XBH_S32 setTypecReset();
 
+    /**
+    * get type-c Forward and Reverse Insertion Det
+    */
+    virtual XBH_S32 getUSBCForwardReverseInsertionDet(XBH_S32 *u32Value);
+
 public:
     XbhHdmiSwitchInterface(){};
     virtual ~XbhHdmiSwitchInterface(){};

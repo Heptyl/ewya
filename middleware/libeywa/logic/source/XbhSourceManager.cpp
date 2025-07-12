@@ -6,15 +6,27 @@
 #include "XbhService.h"
 #include "XbhEventType.h"
 #include "cutils/properties.h"
+#include <hardware/board.h>
 #include <string>
 XbhSourceManager*      XbhSourceManager::mInstance = XBH_NULL;
 XbhMutex               XbhSourceManager::mLock;
+XbhMutex               XbhSourceManager::mCheckLock;
 
 static XBH_BOOL mCurrConnectState[XBH_SOURCE_BUTT] = {0};
 static XBH_BOOL mPreConnectState[XBH_SOURCE_BUTT] = {0};
 
 static XBH_S32 mCurrSignalState = -1;
 static XBH_S32 mPreSignalState = -1;
+
+#define  DEFAULT_DELAY_COUNT             6     //default 3s
+#define  DEFAULT_OPS_BOOT_DELAY_COUNT    50    //default 25s
+static XBH_S32 mDelayCount = 0;
+static XBH_S32 mDelayTotalCnt = DEFAULT_DELAY_COUNT;
+static XBH_BOOL mCheckState = false;
+static XBH_BOOL mOpsBootDelay = XBH_FALSE;
+
+#define SND_CARDS_NODE          "/proc/asound/cards"
+#define READ_BUFFER_SIZE        128
 
 XBH_S32 XbhSourceManager::selectSource(XBH_SOURCE_E u32Source, XBH_WINDOW_NUM_E win)
 {
@@ -65,6 +77,7 @@ XBH_S32 XbhSourceManager::selectSource(XBH_SOURCE_E u32Source, XBH_WINDOW_NUM_E 
         }
         //usleep(200 * 1000);
         //XbhService::getModuleInterface()->setHdmiRx5vDet(XBH_TRUE);
+        XbhService::getModuleInterface()->setTypecReset(u32Source);
     }
     XLOGD(" u32Source = %d end !!!!! ", u32Source);
     return s32Ret;
@@ -117,6 +130,7 @@ XBH_S32 XbhSourceManager::setSourceSwitchPort(XBH_SOURCE_E u32Source)
         }
         //usleep(200 * 1000);
         //XbhService::getModuleInterface()->setHdmiRx5vDet(XBH_TRUE);
+        XbhService::getModuleInterface()->setTypecReset(u32Source);
     }
     XLOGD(" u32Source = %d end !!!!! ", u32Source);
     return s32Ret;
@@ -489,13 +503,35 @@ XBH_S32 XbhSourceManager::processSrcConnectStatus()
 XBH_S32 XbhSourceManager::processSrcSignalStatus()
 {
     XBH_S32 signalStatus = -1;
+    XBH_S32 mic_card_id;
+    XBH_S32 uac_card_id;
+    XBH_BOOL power_status = XBH_FALSE;
+    char mic_card_str[PROPERTY_VALUE_MAX];
+    char uac_card_str[PROPERTY_VALUE_MAX];
+
     getSourceSignalStatus(mCurrentSrc, &signalStatus);
     //通过这里信源切换去切音频算法的通道
     if(mCurrentSrc == XBH_SOURCE_ANDROID && property_get_bool("persist.vendor.xbh.pdm_enable", false))
     {   
-        property_set("persist.vendor.xbh.usb.uac_otg_enable", "false");
-        property_set("persist.vendor.xbh.pdm_type", "0");
+        if (property_get_bool("persist.vendor.xbh.usb.uac_otg_enable", false))
+        {
+            property_set("persist.vendor.xbh.usb.uac_otg_enable", "false");
+            property_set("persist.vendor.xbh.pdm_type", "0");
+        }
     }
+    if (mCurrentSrc == XBH_SOURCE_OPS1 || mCurrentSrc == XBH_SOURCE_OPS2) //只针对ops关机的时候
+    {
+        XbhService::getPlatformInterface()->getOpsPowerStatus(&power_status, mCurrentSrc);
+        if (power_status == XBH_FALSE)
+        {    
+            if (property_get_bool("persist.vendor.xbh.usb.uac_otg_enable", false))
+            {   
+                XLOGD("ops is power down, signalStatus = %d\n", signalStatus);
+                property_set("persist.vendor.xbh.usb.uac_otg_enable", "false");
+            }
+        }
+    }
+
     if(signalStatus != -1)
     {
         mCurrSignalState = signalStatus;
@@ -503,31 +539,118 @@ XBH_S32 XbhSourceManager::processSrcSignalStatus()
         {
             mPreSignalState = signalStatus;
             XLOGD("signal is change, status = %d ", signalStatus);
+            if (mCurrentSrc == XBH_SOURCE_OPS1 || mCurrentSrc == XBH_SOURCE_OPS2)
+            {
+                XbhService::getPlatformInterface()->getOpsPowerStatus(&power_status, mCurrentSrc);
+                if (power_status == XBH_FALSE)
+                    mOpsBootDelay = XBH_TRUE;
+            }
             //通过这里信源切换去切音频算法的通道
             if(property_get_bool("persist.vendor.xbh.pdm_enable", false))
             {
-                if(signalStatus)
-                {   
-                    property_set("persist.vendor.xbh.usb.uac_otg_enable", "false");
-                    property_set("persist.vendor.xbh.pdm_type", "0");
-                }
-                else
+                if (signalStatus == 0)
                 {   
                     if (access("/vendor/bin/uac_app", F_OK) == 0)
                     {   
+#ifdef XBH_BOARD_MIC_SOUND_CARD_NAME
+                        //动态获取lango和uac声卡id并设置到属性中
+                        uac_card_id = getCardIndexByName(XBH_BOARD_UAC_SOUND_CARD_NAME);
+                        mic_card_id = getCardIndexByName(XBH_BOARD_MIC_SOUND_CARD_NAME);
+                        if (mic_card_id < 0)
+                        {
+                            mic_card_id = XBH_BOARD_MIC_SND_CARD_ID_DEFAULT;
+                        }
+                        if (uac_card_id < 0)
+                        {
+                            uac_card_id = XBH_BOARD_UAC_SND_CARD_ID_DEFAULT;
+                        }
+
+                        snprintf(uac_card_str, sizeof(uac_card_str), "%d", uac_card_id);
+                        snprintf(mic_card_str, sizeof(mic_card_str), "%d", mic_card_id);
+                        property_set("persist.vendor.xbh.uac_card_id", uac_card_str);
+                        property_set("persist.vendor.xbh.mic_card_id", mic_card_str);
+                        XLOGD("mic card id:%d,uac card id:%d\n", mic_card_id,uac_card_id);
+#endif
                         XLOGD("pdm mic changed otg mCurrentSrc = %d ", mCurrentSrc);
-                        property_set("persist.vendor.xbh.pdm_type", "1");
-                        usleep(30*1000);
+                        //property_set("persist.vendor.xbh.pdm_type", "1");
+                        //usleep(30*1000);
                         property_set("persist.vendor.xbh.usb.uac_android_enable", "false");
-                        property_set("persist.vendor.xbh.usb.uac_otg_enable", "true");                 
+                        //property_set("persist.vendor.xbh.usb.uac_otg_enable", "true");
+                        switch(mCurrentSrc) //只针对typeC 插拔才会处理reset uac_app.
+                        {
+                            case XBH_SOURCE_USBC1:
+                            case XBH_SOURCE_USBC2:
+                            case XBH_SOURCE_USBC3:
+                            case XBH_SOURCE_USBC4:
+                            case XBH_SOURCE_F_USBC1:
+                            case XBH_SOURCE_F_USBC2:
+                            case XBH_SOURCE_F_USBC3:
+                            case XBH_SOURCE_F_USBC4:
+                                setFollowPort(mCurrentSrc);
+                                break;
+                            default:  // 针对typeB 检测插拔处理是否reset uac_app.
+                                XLOGI("need not to reset uac_app");
+                                break;
+                        }
                     }
-                    
                 }
             }
             MsgPublisher().PostMsg(XBH_SRC_EVT_SIGNALCHANGE, &signalStatus, sizeof(signalStatus));
         }
+        {
+            XbhMutex::Autolock lock(mCheckLock);
+            if (mCheckState) // 使能延迟延迟启动
+            {
+                if (mDelayCount++ >= mDelayTotalCnt)// 每500ms循环一次，循环次数
+                {   
+                    XLOGD("mic checkout finished");
+                    property_set("persist.vendor.xbh.usb.uac_android_enable", "false");
+                    property_set("persist.vendor.xbh.pdm_type", "1");
+                    property_set("persist.vendor.xbh.usb.uac_otg_enable", "true");
+                    mDelayCount = 0;
+                    mCheckState = false;
+                }
+            }
+        }
     }
     return XBH_SUCCESS;
+}
+
+XBH_S32 XbhSourceManager::getCardIndexByName(char *name)
+{
+    FILE *mCardFile = NULL;
+    XBH_S32 mCardIndex = -1;
+    if (!name)
+    {
+        return -1;
+    }
+    mCardFile = fopen(SND_CARDS_NODE, "r");
+    if (mCardFile)
+    {
+        char tempbuffer[READ_BUFFER_SIZE];
+        while (!feof(mCardFile))
+        {
+            fgets(tempbuffer, READ_BUFFER_SIZE, mCardFile);
+            /* this line contain '[' character */
+            if (strchr(tempbuffer, '['))
+            {
+                char *Rch = strtok(tempbuffer, "[");
+                XBH_S32 id = atoi(Rch);
+                ALOGD("\tcurrent card id = %d, Rch = %s", id, Rch);
+                Rch = strtok(NULL, " ]");
+                ALOGD("\tcurrent sound card name = %s", Rch);
+                if (strcmp(Rch, name) == 0)
+                {
+                    ALOGD("\t sound cardIndex found = %d", id);
+                    mCardIndex = id;
+                    break;
+                }
+            }
+            memset(tempbuffer, 0, READ_BUFFER_SIZE);
+        }
+        fclose(mCardFile);
+    }
+    return mCardIndex;
 }
 
 XBH_S32 XbhSourceManager::pushSourcePlugStatus(XBH_SOURCE_E u32Source, XBH_BOOL status)
@@ -550,6 +673,39 @@ XBH_S32 XbhSourceManager::pushSourcePlugStatus(XBH_SOURCE_E u32Source, XBH_BOOL 
 XBH_S32 XbhSourceManager::processOpsSignalStatus(XBH_SOURCE_E u32Source)
 {
     XbhService::getModuleInterface()->processOpsSignalStatus(u32Source);
+    return XBH_SUCCESS;
+}
+
+XBH_S32 XbhSourceManager::setFollowPort(XBH_SOURCE_E u32Source)
+{
+    if (property_get_bool("persist.vendor.xbh.pdm_enable", false))
+    {
+        XbhMutex::Autolock lock(mCheckLock);
+        property_set("persist.vendor.xbh.usb.uac_otg_enable", "false");
+        mDelayCount = 0;
+        switch(u32Source)
+        {
+            case XBH_SOURCE_ANDROID:
+                mCheckState = false;
+                property_set("persist.vendor.xbh.pdm_type", "0");
+                break;
+            case XBH_SOURCE_OPS1:
+            case XBH_SOURCE_OPS2:
+                mCheckState = true;
+                mDelayTotalCnt = property_get_int32("persist.vendor.xbh.DelayTotalCnt", DEFAULT_DELAY_COUNT);
+                if (mOpsBootDelay == XBH_TRUE)
+                {
+                    mDelayTotalCnt = DEFAULT_OPS_BOOT_DELAY_COUNT;
+                    mOpsBootDelay = XBH_FALSE;
+                    XLOGD("OPS boot delay %d", mDelayTotalCnt);
+                }
+                break;
+            default:
+                mCheckState = true;
+                mDelayTotalCnt = DEFAULT_DELAY_COUNT; //默认延迟3s.
+                break;
+        }
+    }
     return XBH_SUCCESS;
 }
 

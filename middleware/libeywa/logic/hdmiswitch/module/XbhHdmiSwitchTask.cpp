@@ -16,6 +16,7 @@
 #include "ChipLt8668SX.h"
 #include "ChipGsv2712.h"
 #include "ChipGsv2702.h"
+#include "ChipWxqLt8641.h"
 
 XbhHdmiSwitchTask*              XbhHdmiSwitchTask::mInstance = XBH_NULL;
 XbhMutex                        XbhHdmiSwitchTask::mLock;
@@ -224,8 +225,11 @@ XBH_S32 XbhHdmiSwitchTask::setSpecificMode(XBH_U32 devType)
             // 检查设备类型是否匹配
             if (mList1[i][j] == hdmiSwitchicID)
             {
-                m_pXbhHdmiSwitchInterface[i][j]->setSpecificMode();
-                return XBH_SUCCESS;  // 假设XBH_SUCCESS是一个有效的返回状态
+                if (m_pXbhHdmiSwitchInterface[i][j] != XBH_NULL)
+                {
+                    m_pXbhHdmiSwitchInterface[i][j]->setSpecificMode();
+                    return XBH_SUCCESS;  // 假设XBH_SUCCESS是一个有效的返回状态
+                }
             }
         }
     }
@@ -266,14 +270,10 @@ XBH_S32 XbhHdmiSwitchTask::setPhysicalAddr(XBH_U32 devType, XBH_U8 port, XBH_U16
             // 检查设备类型是否匹配
             if (mList1[i][j] == hdmiSwitchicID)
             {
-                if(m_pXbhHdmiSwitchInterface[i][j] != XBH_NULL)
+                if (m_pXbhHdmiSwitchInterface[i][j] != XBH_NULL)
                 {
                     m_pXbhHdmiSwitchInterface[i][j]->setPhysicalAddr(port, cecAddr);
                     return XBH_SUCCESS;  // 假设XBH_SUCCESS是一个有效的返回状态
-                }
-                else
-                {
-                    continue;  // 开机过程中还未初始化完IC
                 }
             }
         }
@@ -329,8 +329,11 @@ XBH_S32 XbhHdmiSwitchTask::getFirmwareVersion(XBH_U32 devType, XBH_CHAR* strVers
             // 检查设备类型是否匹配，然后更新固件
             if (mList1[i][j] == hdmiSwitchicID)
             {
-                m_pXbhHdmiSwitchInterface[i][j]->getFirmwareVersion(strVersion);
-                return XBH_SUCCESS;  // 假设XBH_SUCCESS是一个有效的返回状态
+                if (m_pXbhHdmiSwitchInterface[i][j] != XBH_NULL)
+                {
+                    m_pXbhHdmiSwitchInterface[i][j]->getFirmwareVersion(strVersion);
+                    return XBH_SUCCESS;  // 假设XBH_SUCCESS是一个有效的返回状态
+                }
             }
         }
     }
@@ -385,8 +388,11 @@ XBH_S32 XbhHdmiSwitchTask::upgradeFirmware(XBH_U32 devType, const XBH_CHAR* strF
              XLOGD(" upgradeFirmware i =%d j = %d ",i , j);
             if (mList1[i][j] == hdmiSwitchicID)
             {
-                m_pXbhHdmiSwitchInterface[i][j]->upgradeFirmware(strFilePath, bForceUpgrade);
-                return XBH_SUCCESS;  // 假设XBH_SUCCESS是一个有效的返回状态
+                if (m_pXbhHdmiSwitchInterface[i][j] != XBH_NULL)
+                {
+                    m_pXbhHdmiSwitchInterface[i][j]->upgradeFirmware(strFilePath, bForceUpgrade);
+                    return XBH_SUCCESS;  // 假设XBH_SUCCESS是一个有效的返回状态
+                }
             }
         }
     }
@@ -440,9 +446,12 @@ XBH_S32 XbhHdmiSwitchTask::setChargingPower(XBH_U32 devType, XBH_U8 data)
              //XLOGD(" setChargingPower i =%d j = %d ",i , j);
             if (mList1[i][j] == hdmiSwitchicID)
             {
-                m_pXbhHdmiSwitchInterface[i][j]->setChargingPower(data);
-                XLOGD(" setChargingPower i =%d j = %d ",i , j);
-                return XBH_SUCCESS;  // 假设XBH_SUCCESS是一个有效的返回状态
+                if (m_pXbhHdmiSwitchInterface[i][j] != XBH_NULL)
+                {
+                    m_pXbhHdmiSwitchInterface[i][j]->setChargingPower(data);
+                    XLOGD(" setChargingPower i =%d j = %d ",i , j);
+                    return XBH_SUCCESS;  // 假设XBH_SUCCESS是一个有效的返回状态
+                }
             }
         }
     }
@@ -496,8 +505,11 @@ XBH_S32 XbhHdmiSwitchTask::getUpgradeState(XBH_U32 devType, XBH_S32 *pState)
             // 检查设备类型是否匹配，然后更新固件
             if (mList1[i][j] == hdmiSwitchicID)
             {
-                m_pXbhHdmiSwitchInterface[i][j]->getUpgradeState(pState);
-                return XBH_SUCCESS;  // 假设XBH_SUCCESS是一个有效的返回状态
+                if (m_pXbhHdmiSwitchInterface[i][j] != XBH_NULL)
+                {
+                    m_pXbhHdmiSwitchInterface[i][j]->getUpgradeState(pState);
+                    return XBH_SUCCESS;  // 假设XBH_SUCCESS是一个有效的返回状态
+                }
             }
         }
     }
@@ -531,8 +543,11 @@ XBH_S32 XbhHdmiSwitchTask::setHdcpKey(XBH_U32 devType, const XBH_CHAR* strFilePa
              XLOGD(" setHdcpKey i =%d j = %d ",i , j);
             if (mList1[i][j] == hdmiSwitchicID)
             {
-                m_pXbhHdmiSwitchInterface[i][j]->setHdcpKey(strFilePath);
-                return XBH_SUCCESS;  // 假设XBH_SUCCESS是一个有效的返回状态
+                if (m_pXbhHdmiSwitchInterface[i][j] != XBH_NULL)
+                {
+                    m_pXbhHdmiSwitchInterface[i][j]->setHdcpKey(strFilePath);
+                    return XBH_SUCCESS;  // 假设XBH_SUCCESS是一个有效的返回状态
+                }
             }
         }
     }
@@ -572,8 +587,11 @@ XBH_S32 XbhHdmiSwitchTask::getHdmiSwitchHdcpKey(XBH_U32 devType,XBH_CHAR* hdcpVa
              XLOGD(" setHdcpKey i =%d j = %d ",i , j);
             if (mList1[i][j] == hdmiSwitchicID)
             {
-                m_pXbhHdmiSwitchInterface[i][j]->getHdmiSwitchHdcpKey(devType,hdcpValue,hdcpType);
-                return XBH_SUCCESS;  // 假设XBH_SUCCESS是一个有效的返回状态
+                if (m_pXbhHdmiSwitchInterface[i][j] != XBH_NULL)
+                {
+                    m_pXbhHdmiSwitchInterface[i][j]->getHdmiSwitchHdcpKey(devType,hdcpValue,hdcpType);
+                    return XBH_SUCCESS;  // 假设XBH_SUCCESS是一个有效的返回状态
+                }
             }
         }
     }
@@ -604,8 +622,11 @@ XBH_S32 XbhHdmiSwitchTask::getHdcpKeyName(XBH_U32 devType, XBH_CHAR* strHdcpFile
             // 检查设备类型是否匹配，然后更新固件
             if (mList1[i][j] == hdmiSwitchicID)
             {
-                m_pXbhHdmiSwitchInterface[i][j]->getHdcpKeyName(strHdcpFileName);
-                return XBH_SUCCESS;  // 假设XBH_SUCCESS是一个有效的返回状态
+                if (m_pXbhHdmiSwitchInterface[i][j] != XBH_NULL)
+                {
+                    m_pXbhHdmiSwitchInterface[i][j]->getHdcpKeyName(strHdcpFileName);
+                    return XBH_SUCCESS;  // 假设XBH_SUCCESS是一个有效的返回状态
+                }
             }
         }
     }
@@ -636,8 +657,11 @@ XBH_S32 XbhHdmiSwitchTask::setHdcpKeyName(XBH_U32 devType, const XBH_CHAR* strHd
             // 检查设备类型是否匹配，然后更新固件
             if (mList1[i][j] == hdmiSwitchicID)
             {
-                m_pXbhHdmiSwitchInterface[i][j]->setHdcpKeyName(strHdcpFileName);
-                return XBH_SUCCESS;  // 假设XBH_SUCCESS是一个有效的返回状态
+                if (m_pXbhHdmiSwitchInterface[i][j] != XBH_NULL)
+                {
+                    m_pXbhHdmiSwitchInterface[i][j]->setHdcpKeyName(strHdcpFileName);
+                    return XBH_SUCCESS;  // 假设XBH_SUCCESS是一个有效的返回状态
+                }
             }
         }
     }
@@ -691,8 +715,11 @@ XBH_S32 XbhHdmiSwitchTask::updateEdid(XBH_U32 devType,XBH_U8 edid_data[256],XBH_
             // 检查设备类型是否匹配，然后更新固件
             if (mList1[i][j] == hdmiSwitchicID)
             {
-                m_pXbhHdmiSwitchInterface[i][j]->updateEdid(edid_data,port);
-                return XBH_SUCCESS;  // 假设XBH_SUCCESS是一个有效的返回状态
+                if (m_pXbhHdmiSwitchInterface[i][j] != XBH_NULL)
+                {
+                    m_pXbhHdmiSwitchInterface[i][j]->updateEdid(edid_data,port);
+                    return XBH_SUCCESS;  // 假设XBH_SUCCESS是一个有效的返回状态
+                }
             }
         }
     }
@@ -726,8 +753,11 @@ XBH_S32 XbhHdmiSwitchTask::setTypecReset(XBH_S32 devType)
             // 检查设备类型是否匹配
             if (mList1[i][j] == hdmiSwitchicID)
             {
-                m_pXbhHdmiSwitchInterface[i][j]->setTypecReset();
-                return XBH_SUCCESS;  // 假设XBH_SUCCESS是一个有效的返回状态
+                if (m_pXbhHdmiSwitchInterface[i][j] != XBH_NULL)
+                {
+                    m_pXbhHdmiSwitchInterface[i][j]->setTypecReset();
+                    return XBH_SUCCESS;  // 假设XBH_SUCCESS是一个有效的返回状态
+                }
             }
         }
     }
@@ -735,6 +765,49 @@ XBH_S32 XbhHdmiSwitchTask::setTypecReset(XBH_S32 devType)
     return XBH_FAILURE;  // XBH_FAILURE是一个表示错误或无匹配设备的状态
 }
 
+/**
+ * get type-c Forward and Reverse Insertion Det
+ */
+ XBH_S32 XbhHdmiSwitchTask::getUSBCForwardReverseInsertionDet(XBH_S32 devType,XBH_S32 *u32Value)
+ {
+     XLOGD("%s,%d devType =%d", __FUNCTION__,__LINE__,devType);
+     XBH_U8 hdmiSwitchicID  = 0;
+ 
+     switch (devType)
+     {
+          case XBH_UPDATE_BOARD_LT8668SX_1:
+              hdmiSwitchicID = LT8668SX_1;
+              break;
+          case XBH_UPDATE_BOARD_GSV2715_1:
+              hdmiSwitchicID = GSV2715_1;
+              break;
+          case XBH_UPDATE_FRONT_GSV2712:
+              hdmiSwitchicID = GSV2712_1;
+              break;
+          default:
+              XLOGD("Out of range\n");
+              break;
+     }
+     // 遍历每个HdmiSwitch
+     for (int i = 0; i < 4; i++)
+     {
+         for (int j = 0; j < 4; j++)
+         {
+             // 检查设备类型是否匹配
+              XLOGD(" getUSBCForwardReverseInsertionDet i =%d j = %d ",i , j);
+             if (mList1[i][j] == hdmiSwitchicID)
+             {
+                if (m_pXbhHdmiSwitchInterface[i][j] != XBH_NULL)
+                {
+                    m_pXbhHdmiSwitchInterface[i][j]->getUSBCForwardReverseInsertionDet(u32Value);
+                    return XBH_SUCCESS;  // 假设XBH_SUCCESS是一个有效的返回状态
+                }
+            }
+         }
+     }
+     return XBH_FAILURE;  // XBH_FAILURE是一个表示错误或无匹配设备的状态
+ }
+ 
 void XbhHdmiSwitchTask::run(const void* arg)
 {
     for (int i = 3; i >= 0; i--)
@@ -744,14 +817,17 @@ void XbhHdmiSwitchTask::run(const void* arg)
             switch(mList1[i][j])
             {
                 case ITE663335_1:
-                    m_pXbhHdmiSwitchInterface[i][j] = new ChipIt66353(mList2[i][j].iicBus, mList2[i][j].iicAddr, mList2[i][j].pGpio, mList2[i][j].pLevel, mList2[i][j].rGpio, mList2[i][j].rLevel, mList2[i][j].defaultPort, m_pXbhHdmiSwitchPortTable[i][j], 3 - i);
+                    m_pXbhHdmiSwitchInterface[i][j] = new ChipIt66353(mList2[i][j].iicBus, mList2[i][j].iicAddr, mList2[i][j].pGpio, mList2[i][j].pLevel, mList2[i][j].rGpio, mList2[i][j].rLevel, mList2[i][j].defaultPort, m_pXbhHdmiSwitchPortTable[i][j], i > 0 ? 0 : 1);
                     break;
                 case ITE663335_2:
-                    m_pXbhHdmiSwitchInterface[i][j] = new ChipIt66353_2(mList2[i][j].iicBus, mList2[i][j].iicAddr, mList2[i][j].pGpio, mList2[i][j].pLevel, mList2[i][j].rGpio, mList2[i][j].rLevel, mList2[i][j].defaultPort, m_pXbhHdmiSwitchPortTable[i][j], 3 - i);
+                    m_pXbhHdmiSwitchInterface[i][j] = new ChipIt66353_2(mList2[i][j].iicBus, mList2[i][j].iicAddr, mList2[i][j].pGpio, mList2[i][j].pLevel, mList2[i][j].rGpio, mList2[i][j].rLevel, mList2[i][j].defaultPort, m_pXbhHdmiSwitchPortTable[i][j], i > 0 ? 0 : 1);
                     break;
                 case GSV2712_1:
-                     m_pXbhHdmiSwitchInterface[i][j] = new ChipGsv2712(mList2[i][j].iicBus, mList2[i][j].iicAddr, mList2[i][j].pGpio, mList2[i][j].pLevel, mList2[i][j].rGpio, mList2[i][j].rLevel, mList2[i][j].defaultPort, m_pXbhHdmiSwitchPortTable[i][j], 3 - i);
+                     m_pXbhHdmiSwitchInterface[i][j] = new ChipGsv2712(mList2[i][j].iicBus, mList2[i][j].iicAddr, mList2[i][j].pGpio, mList2[i][j].pLevel, mList2[i][j].rGpio, mList2[i][j].rLevel, mList2[i][j].defaultPort, m_pXbhHdmiSwitchPortTable[i][j], i > 0 ? 0 : 1);
                     break;
+                case WXQ_LT8641UX_U5:
+                     m_pXbhHdmiSwitchInterface[i][j] = new ChipWXQLT8641(mList2[i][j].sGpio, mList2[i][j].sLevel,mList2[i][j].sGpio2, mList2[i][j].sLevel2, mList2[i][j].pGpio, mList2[i][j].pLevel, mList2[i][j].rGpio, mList2[i][j].rLevel, mList2[i][j].defaultPort, m_pXbhHdmiSwitchPortTable[i][j], i > 0 ? 0 : 1);
+                    break; 
                 case GSV2712_2:
                     break;
                 case LT8641_1:
@@ -760,28 +836,26 @@ void XbhHdmiSwitchTask::run(const void* arg)
                     break;
                 case ASW3642:
                 case TS3DV642:
-                    m_pXbhHdmiSwitchInterface[i][j] = new ChipAsw3642(mList2[i][j].sGpio, mList2[i][j].sLevel, mList2[i][j].pGpio, mList2[i][j].pLevel, mList2[i][j].rGpio, mList2[i][j].rLevel, mList2[i][j].defaultPort, m_pXbhHdmiSwitchPortTable[i][j], 3 - i);
+                    m_pXbhHdmiSwitchInterface[i][j] = new ChipAsw3642(mList2[i][j].sGpio, mList2[i][j].sLevel, mList2[i][j].pGpio, mList2[i][j].pLevel, mList2[i][j].rGpio, mList2[i][j].rLevel, mList2[i][j].defaultPort, m_pXbhHdmiSwitchPortTable[i][j], i > 0 ? 0 : 1);
                     break;
                 case GSV2715_1:
-                    m_pXbhHdmiSwitchInterface[i][j] = new ChipGsv2715(mList2[i][j].iicBus, mList2[i][j].iicAddr, mList2[i][j].pGpio, mList2[i][j].pLevel, mList2[i][j].rGpio, mList2[i][j].rLevel, mList2[i][j].defaultPort, m_pXbhHdmiSwitchPortTable[i][j], 3 - i);
+                    m_pXbhHdmiSwitchInterface[i][j] = new ChipGsv2715(mList2[i][j].iicBus, mList2[i][j].iicAddr, mList2[i][j].pGpio, mList2[i][j].pLevel, mList2[i][j].rGpio, mList2[i][j].rLevel, mList2[i][j].defaultPort, m_pXbhHdmiSwitchPortTable[i][j], i > 0 ? 0 : 1);
                     break;
                 case GSV2705_1:
-                    m_pXbhHdmiSwitchInterface[i][j] = new ChipGsv2705(mList2[i][j].iicBus, mList2[i][j].iicAddr, mList2[i][j].pGpio, mList2[i][j].pLevel, mList2[i][j].rGpio, mList2[i][j].rLevel, mList2[i][j].defaultPort, m_pXbhHdmiSwitchPortTable[i][j], 3 - i);
+                    m_pXbhHdmiSwitchInterface[i][j] = new ChipGsv2705(mList2[i][j].iicBus, mList2[i][j].iicAddr, mList2[i][j].pGpio, mList2[i][j].pLevel, mList2[i][j].rGpio, mList2[i][j].rLevel, mList2[i][j].defaultPort, m_pXbhHdmiSwitchPortTable[i][j], i > 0 ? 0 : 1);
                     break;
                 case GSV6712_1:
-                    m_pXbhHdmiSwitchInterface[i][j] = new ChipGsv6712(mList2[i][j].iicBus, mList2[i][j].iicAddr, mList2[i][j].pGpio, mList2[i][j].pLevel, mList2[i][j].rGpio, mList2[i][j].rLevel, mList2[i][j].defaultPort, m_pXbhHdmiSwitchPortTable[i][j], 3 - i);
+                    m_pXbhHdmiSwitchInterface[i][j] = new ChipGsv6712(mList2[i][j].iicBus, mList2[i][j].iicAddr, mList2[i][j].pGpio, mList2[i][j].pLevel, mList2[i][j].rGpio, mList2[i][j].rLevel, mList2[i][j].defaultPort, m_pXbhHdmiSwitchPortTable[i][j], i > 0 ? 0 : 1);
                     break;
                 case LT8668SX_1:
-                    m_pXbhHdmiSwitchInterface[i][j] = new ChipLt8668SX(mList2[i][j].iicBus, mList2[i][j].iicAddr, mList2[i][j].pGpio, mList2[i][j].pLevel, mList2[i][j].rGpio, mList2[i][j].rLevel, mList2[i][j].defaultPort, m_pXbhHdmiSwitchPortTable[i][j], 3 - i);
+                    m_pXbhHdmiSwitchInterface[i][j] = new ChipLt8668SX(mList2[i][j].iicBus, mList2[i][j].iicAddr, mList2[i][j].pGpio, mList2[i][j].pLevel, mList2[i][j].rGpio, mList2[i][j].rLevel, mList2[i][j].defaultPort, m_pXbhHdmiSwitchPortTable[i][j], i > 0 ? 0 : 1);
                     break;
                 case GSV2702_1:
-                    m_pXbhHdmiSwitchInterface[i][j] = new ChipGsv2702(mList2[i][j].iicBus, mList2[i][j].iicAddr, mList2[i][j].pGpio, mList2[i][j].pLevel, mList2[i][j].rGpio, mList2[i][j].rLevel, mList2[i][j].defaultPort, m_pXbhHdmiSwitchPortTable[i][j], 3 - i);
+                    m_pXbhHdmiSwitchInterface[i][j] = new ChipGsv2702(mList2[i][j].iicBus, mList2[i][j].iicAddr, mList2[i][j].pGpio, mList2[i][j].pLevel, mList2[i][j].rGpio, mList2[i][j].rLevel, mList2[i][j].defaultPort, m_pXbhHdmiSwitchPortTable[i][j], i > 0 ? 0 : 1);
                     break;
             }
         }
     }
-    //最里面的switch初始完之后，内部还有流程在跑，因此需要延时1S才算初始化完成
-    usleep(1*1000*1000);
     minitdone = XBH_TRUE;
     //更新HDMI CEC地址
     XbhService::getModuleInterface()->initHdmiCecPhysicalAddr();
@@ -843,6 +917,8 @@ XbhHdmiSwitchTask::XbhHdmiSwitchTask()
             XLOGV("=====switch_iic_list[%d][%d].rLevel = 0x%02x ",i, j, mList2[i][j].rLevel);
             XLOGV("=====switch_iic_list[%d][%d].defaultPort = 0x%02x ",i, j, mList2[i][j].defaultPort);
             XLOGV("=====switch_iic_list[%d][%d].prePort = 0x%02x ",i, j, mList2[i][j].prePort);
+            XLOGV("=====switch_iic_list[%d][%d].sGpio2 = 0x%02x ",i, j, mList2[i][j].sGpio2);
+            XLOGV("=====switch_iic_list[%d][%d].sLevel2 = 0x%02x ",i, j, mList2[i][j].sLevel2);
 
             XLOGV("=====switch_port_list[%d][%d].port0 = %d ",i, j, m_pXbhHdmiSwitchPortTable[i][j].port0);
             XLOGV("=====switch_port_list[%d][%d].port1 = %d ",i, j, m_pXbhHdmiSwitchPortTable[i][j].port1);

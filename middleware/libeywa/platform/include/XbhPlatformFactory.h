@@ -55,6 +55,10 @@
 #ifdef RK_3576
 #include "XbhRk_3576.h"
 
+#if (TYPE_BOARD == XMR3576A)
+#include "XbhXMR3576_A.h"
+#endif
+
 #if (TYPE_BOARD == XMR3576B)
 #include "XbhXMR3576_B.h"
 #endif
@@ -93,6 +97,8 @@
 
 #if (TYPE_BOARD == XMH610A)
 #include "XbhXMH610_A.h"
+#elif (TYPE_BOARD == XMH610B)
+#include "XbhXMH610_B.h"
 #endif
 #endif
 

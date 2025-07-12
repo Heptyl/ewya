@@ -111,6 +111,7 @@ RESET:
     }
     sprintf(strVersion, "%02X%02X", data[0], data[1]);
     XLOGD("getFirmwareVersion  =  %s",strVersion);
+    property_set("persist.vendor.xbh.gsv6125.ver", strVersion);
     return s32Ret;
 }
 
@@ -409,6 +410,8 @@ void ChipGsv6125::run(const void* arg)
     RXDDCDataPoint = 0;
 
     upgradeState = GSV6125Upgrade_RUNNING;
+    property_set("persist.vendor.xbh.gsv6125.ver", "");
+
     if (appI2CUpdateInit() == 1)
     {
         XLOGD ("[%s:%d] mcu run at partition B, upgrade partition A", __func__, __LINE__);
@@ -468,7 +471,6 @@ void ChipGsv6125::run(const void* arg)
             reset();
             usleep(2*1000*1000);
             getFirmwareVersion(FWVer);
-            property_set("persist.vendor.xbh.gsv6125_front.ver", FWVer);
         }
         else
         {

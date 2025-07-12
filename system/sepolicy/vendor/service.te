@@ -1,2 +1,3 @@
 type xbhmiddleware_service, app_api_service, service_manager_type;
 type xbhmiddlewareplugin_service, app_api_service, service_manager_type;
+type xbhManager_service, app_api_service, system_api_service, service_manager_type;

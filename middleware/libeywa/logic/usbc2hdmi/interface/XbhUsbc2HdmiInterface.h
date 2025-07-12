@@ -29,6 +29,11 @@ public:
     virtual XBH_S32 upgradeFirmware(const XBH_CHAR* strFilePath, XBH_BOOL bForceUpgrade);
 
     /**
+    * dataflow进行固件升级
+    */
+    virtual XBH_S32 upgradeFirmwareByData(XBH_U8 *data, XBH_U32 dataLen,XBH_BOOL bForceUpgrade);
+
+    /**
      * 获取固件升级时的状态
      */
     virtual XBH_S32 getUpgradeState(XBH_S32 * s32State);

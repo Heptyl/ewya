@@ -33,6 +33,8 @@ ChipGsv2712::ChipGsv2712(XBH_S32 i2cNumber, XBH_S32 i2cAddress, XBH_S32 powerGpi
     //power on
     if(mPowerGpio != -1)
     {
+        XbhService::getModuleInterface()->setGpioOutputValue(mPowerGpio, !mPowerLevel);
+        usleep(100*1000);
         XbhService::getModuleInterface()->setGpioOutputValue(mPowerGpio, mPowerLevel);
         usleep(100*1000);
     }
@@ -57,6 +59,33 @@ ChipGsv2712::ChipGsv2712(XBH_S32 i2cNumber, XBH_S32 i2cAddress, XBH_S32 powerGpi
         XbhService::getModuleInterface()->setGpioOutputValue(mResetGpio, mResetLevel);
         usleep(100 * 1000);
     }
+    else
+    {
+        //当不支持硬件复位时，使用软件复位
+        //当存在后一级switch的时候需要等待后一级switch初始化完成
+        if(mHasNextPort)
+        {
+            usleep(2 * level * 1000 * 1000);
+        }
+        XBH_U8 resetData = CMD_RESET; //软复位
+        XbhService::getModuleInterface()->setI2cData(mI2cNumber, mI2cAddress, REG_HPD_ASSERT_CTRL, 2, 1, &resetData);
+        usleep(100 * 1000);
+    }
+    
+    #if (TYPE_BOARD == XMA311D2T2)
+    {
+       XBH_S32 ret = XBH_FAILURE;
+       usleep(1000 * 1000);
+       ret = setNormalMode();
+       if(ret == XBH_SUCCESS)
+       {
+           XLOGD("setNormalMode: success ");
+       }else
+       {
+           XLOGD("setNormalMode: fail ");
+       }
+    }
+    #endif
 
     if(0x01 == m_u8SwitchPort.port0)
     {
@@ -286,6 +315,7 @@ RESET:
     }
     sprintf(strVersion, "%02X%02X", data[0], data[1]);
     XLOGD("getFirmwareVersion  =  %s",strVersion);
+    property_set("persist.vendor.xbh.gsv2712_front.ver", strVersion);
     return s32Ret;
 }
 
@@ -750,6 +780,7 @@ XBH_S32 ChipGsv2712::setSpecificMode(void)
     }
     return ret;
 }
+
 XBH_S32 ChipGsv2712::updateEdid(XBH_U8 edid_data[256],XBH_U8 port)
 {
     XbhMutex::Autolock _l(mLock);
@@ -1030,6 +1061,50 @@ XBH_S32 ChipGsv2712::setTypecReset()
     XbhService::getModuleInterface()->setI2cData(mI2cNumber, mI2cAddress, REG_TYPEC_RESET, 2, 1,&RXDDCCmd);
     return 0;
 }
+
+XBH_S32 ChipGsv2712::getUSBCForwardReverseInsertionDet(XBH_S32 *u32Value)
+{
+    XBH_S32 s32Ret = XBH_SUCCESS;
+    XBH_U8 tmp = 0;
+    s32Ret = readData(XBH_GSV2712_FORWARD_REVERSE_INSERTION, &tmp, 1);
+    *u32Value = tmp;
+    XLOGD("getUSBCForwardReverseInsertionDet u32Value:%d\n",*u32Value);
+    return s32Ret;
+}
+
+XBH_S32 ChipGsv2712::setNormalMode(void)
+{
+    XBH_S32 ret = XBH_FAILURE;
+    XBH_U8 normal_flag = 0x00;
+    XBH_U8 normal_data = 0xA8;
+    XBH_U8 normal_times = 0;
+    XBH_CHAR* FwVer = (char *)malloc(10);
+    ret = getFirmwareVersion(FwVer);
+    if(ret == XBH_SUCCESS)//将Gsv2712设置为Normal模式
+    {
+        while(normal_flag != normal_data)
+        {
+            XbhService::getModuleInterface()->setI2cData(mI2cNumber, mI2cAddress,0xFF09,2,1,&normal_data);
+            usleep(500 * 1000);//500ms
+            XbhService::getModuleInterface()->getI2cData(mI2cNumber, mI2cAddress,0xFF09,2,1,&normal_flag);
+            normal_times++;
+            if(normal_times == 3)
+            {
+                XLOGD("gsv2712 set  normal fail ! %x\n",normal_flag);
+                ret = XBH_FAILURE;
+                break;
+            }
+
+            if(normal_flag == normal_data)
+            {
+                XLOGD("gsv2712 set normal success ! %x\n",normal_flag);
+            }
+        }
+    }
+
+    return ret;
+}
+
 void ChipGsv2712::run(const void* arg)
 {
     XLOGI("[%s:%d]  file name: %s", __func__, __LINE__, file_name);
@@ -1043,6 +1118,8 @@ void ChipGsv2712::run(const void* arg)
     RXDDCDataPoint = 0;
 
     upgradeState = GSV2712Upgrade_RUNNING;
+    property_set("persist.vendor.xbh.gsv2712_front.ver", "");
+
     if (appI2CUpdateInit() == 1)
     {
         XLOGD ("[%s:%d] mcu run at partition B, upgrade partition A", __func__, __LINE__);
@@ -1102,7 +1179,6 @@ void ChipGsv2712::run(const void* arg)
             reset();
             usleep(2*1000*1000);
             getFirmwareVersion(FWVer);
-            property_set("persist.vendor.xbh.gsv2712_front.ver", FWVer);
         }
         else
         {

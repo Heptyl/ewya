@@ -97,6 +97,14 @@ enum
     GSV2705_PORT_RX_D,
 };
 
+enum GSV2705_WDT_STATE_E {  
+    GSV2705_WDT_READY       = 0,  // 即将开始
+    GSV2705_WDT_STARTING    = 1,  // 开始运行
+    GSV2705_WDT_RUNNING     = 2,  // 运行中
+    GSV2705_WDT_UPGRADING   = 3,  // 升级中
+};
+
+
 static const unsigned char crc8Gsv2705Table[256] =
 {
     0x00, 0x07, 0x0E, 0x09, 0x1C, 0x1B, 0x12, 0x15, 0x38, 0x3F, 0x36, 0x31, 0x24, 0x23, 0x2A, 0x2D,

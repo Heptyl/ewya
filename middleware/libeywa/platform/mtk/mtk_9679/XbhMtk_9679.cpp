@@ -692,6 +692,7 @@ XBH_S32 XbhMtk_9679::getADCChannelValue(XBH_ADC_CHANNEL_NUM_E enChannel, XBH_U32
     if(s32Ret == -1)
     {
         XLOGE("read ADC_DEV_PATH error!\n");
+        close(fp);
         return XBH_FAILURE;
     }
 

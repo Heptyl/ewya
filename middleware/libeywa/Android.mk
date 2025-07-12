@@ -4,7 +4,7 @@ LOCAL_PATH := $(call my-dir)
 XMM8195U := 1
 XMM8195G := 2
 XMM8195U_V2 := 3
-MY_BOARD := ${XMM8195G}
+MY_BOARD := ${XMM8195U_V2}
 
 include $(CLEAR_VARS)
 
@@ -96,7 +96,8 @@ LOCAL_SHARED_LIBRARIES := \
     vendor.mediatek.hardware.nvram@1.0 \
     vendor.xbh.hardware.xbhhwmw@1.0 \
     libcutils \
-    libms9282
+    libms9282 \
+    libusb
 
 #ALL_DEFAULT_INSTALLED_MODULES += $(LOCAL_MODULE)
 include $(BUILD_SHARED_LIBRARY)

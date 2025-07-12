@@ -233,6 +233,32 @@ XBH_S32 XbhAudioCodecTask::getMicHowling(XBH_BOOL* enable)
 }
 
 /**
+ * 设置line out在线切换模式
+*/
+XBH_S32 XbhAudioCodecTask::setLineOutMode(XBH_LINEOUT_MODE_E enLineOutMode)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    if(m_pXbhAudioCodecInterface[0] != NULL)
+    {
+        s32Ret = m_pXbhAudioCodecInterface[0]->setLineOutMode(enLineOutMode);
+    }
+    return s32Ret;
+}
+
+/**
+ * 获取line out当前模式
+*/
+XBH_S32 XbhAudioCodecTask::getLineOutMode(XBH_LINEOUT_MODE_E* enLineOutMode)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    if(m_pXbhAudioCodecInterface[0] != NULL)
+    {
+        s32Ret = m_pXbhAudioCodecInterface[0]->getLineOutMode(enLineOutMode);
+    }
+    return s32Ret;
+}
+
+/**
  * 获取codec是否初始化完成
 */
 XBH_S32 XbhAudioCodecTask::getChipInitDone(XBH_BOOL* enable)

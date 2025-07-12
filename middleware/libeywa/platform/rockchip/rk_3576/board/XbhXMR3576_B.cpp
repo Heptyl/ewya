@@ -151,7 +151,7 @@ XBH_S32 XbhXMR3576_B::setOpsPowerCtrl(XBH_SOURCE_E enSource)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
     #ifdef XBH_BOARD_GPIO_OPS_PS_ON
-    XBH_U32 u32OpspowerTimer = 500;
+    XBH_U32 u32OpspowerTimer = 550;
     XBH_U32 u32Ops12VTimer = 200;
     XBH_BOOL bIsDet = XBH_FALSE;
     if (enSource == XBH_SOURCE_OPS1)
@@ -906,6 +906,11 @@ XBH_S32 XbhXMR3576_B::setOnStop()
     s32Ret = XbhRk_3576::setShutdownFlag(XBH_TRUE);
     s32Ret = setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_SPEAKER, XBH_TRUE);
     s32Ret |= setMute(XBH_AUDIO_CHANNEL_E::XBH_AUDIO_CHANNEL_HEADPHONE, XBH_TRUE);
+    //关闭codec电源之前先关闭时钟，满足codec的时序要求。
+    setGpioOutputValue(XBH_BOARD_GPIO_CODEC_LRCK,XBH_BOARD_GPIO_CODEC_LRCK_OFF);
+    setGpioOutputValue(XBH_BOARD_GPIO_CODEC_BCLK,XBH_BOARD_GPIO_CODEC_BCLK_OFF);
+    setGpioOutputValue(XBH_BOARD_GPIO_CODEC_MCLK,XBH_BOARD_GPIO_CODEC_MCLK_OFF);
+    usleep(500 *1000);//延时等待上面时钟的关闭
     setGpioOutputValue(XBH_BOARD_GPIO_AP8224_PWR,XBH_BOARD_GPIO_CODEC_POWER_OFF);//关闭codes电源
     setGpioOutputValue(XBH_BOARD_GPIO_AMP_MUTE,XBH_BOARD_GPIO_AMP_MUTE_ON);//关闭AMP PD
     setHdmiTxInfo(XBH_HDMI_TX_VIDEO_MUTE, 1);//关闭 DP

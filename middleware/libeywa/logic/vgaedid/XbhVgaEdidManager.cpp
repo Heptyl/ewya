@@ -18,56 +18,64 @@
 
 XbhVgaEdidManager*               XbhVgaEdidManager::mInstance = XBH_NULL;
 XbhMutex                         XbhVgaEdidManager::mLock;
-
+// /vendor/etc/project_ids/projectid_1/edid/BIN/EDID_VGA.bin
 XBH_S32 XbhVgaEdidManager::setVgaEdid(const XBH_CHAR* strPath, XBH_SOURCE_E idx)
 {
-    XLOGE("VGA_EDID in upgrade mode\n");
+    XLOGD("VGA_EDID in upgrade mode");
     XBH_S32 s32Ret = XBH_FAILURE;
-    idx = XBH_SOURCE_VGA1;
     XBH_U8 dataBuf[128] = {0};
     XBH_U8 len = 0;
     FILE *fp = NULL;
+    //清除EDID 数据
+    if(idx == XBH_SOURCE_HDMI1)
+    {
+        memset(dataBuf, 0x00, 128);
+        return setVgaEdidData(dataBuf, XBH_SOURCE_VGA1);
+    }
+    idx = XBH_SOURCE_VGA1;
+
     fp = fopen(strPath, "rb");
+    property_set("persist.vendor.xbh.vga_edid.ver", "");
     
     // 读取EDID
     if(fp != NULL)
     {
         fseek(fp, 0, SEEK_END);
-        len = ftell(fp);       
+        len = ftell(fp);
         XLOGD("Read file size:%d\n", len);
         fseek(fp, 0, SEEK_SET);
 
         if(len == 128)
         {   
-            XLOGD("Read edid file success!!!\n");
+            XLOGD("Read edid file success!!!");
             fread(dataBuf, 1, 128, fp);
         } 
         else 
         {
-            XLOGE("EDID file size bytes.error!!!\n");
+            XLOGE("EDID file size bytes.error!!!");
             fclose(fp);
             return s32Ret;
         }
-        fclose(fp);        
+        fclose(fp);
     }
     else 
     {
-        XLOGE("Open upgrade file %s fail!\n", strPath);
+        XLOGE("Open upgrade file %s fail!", strPath);
         return XBH_FAILURE;
     }
 
     #ifdef XBH_BOARD_VGA_EEPROM_WP_GPIO
     //关闭EEPROM WP保护
     XbhService::getModuleInterface()->setGpioOutputValue(XBH_BOARD_VGA_EEPROM_WP_GPIO, XBH_BOARD_VGA_EEPROM_WP_OFF);
-    #else  
+    #else
+    XLOGE("no defined XBH_BOARD_VGA_EEPROM_WP_GPIO");
     return XBH_FAILURE;
     #endif
-
     usleep(10 * 1000);
-
-    // 按Byte方式写入EDID
-    for (int i = 0; i < sizeof(dataBuf); i++)
+    XLOGD("Set edid start !!! ");
+    for(int i = 0; i < 128; i ++)
     {
+        // 按Byte方式写入EDID
         #ifdef VGA_EEPROM_I2C_BUS
         //使用标准iic
         s32Ret = XbhService::getPlatformInterface()->setIICData(VGA_EEPROM_I2C_BUS, VGA_EEPROM_I2C_ADDR, i, 1, 1, &dataBuf[i]);
@@ -75,33 +83,34 @@ XBH_S32 XbhVgaEdidManager::setVgaEdid(const XBH_CHAR* strPath, XBH_SOURCE_E idx)
         //使用模拟iic
         s32Ret = XbhService::getModuleInterface()->setVgaEdidI2cData(i, &dataBuf[i], 1);
         #endif
-        usleep(10 * 1000);
         if (s32Ret != XBH_SUCCESS)
         {
             XLOGE("Set edid failed, return");
-
             #ifdef XBH_BOARD_VGA_EEPROM_WP_GPIO
             //打开EEPROM WP保护
             XbhService::getModuleInterface()->setGpioOutputValue(XBH_BOARD_VGA_EEPROM_WP_GPIO, XBH_BOARD_VGA_EEPROM_WP_ON);
             #endif
             return s32Ret;
         }
+        usleep(10 * 1000);
     }
-    XLOGD("Set edid successful");
-
+    usleep(10 * 1000);
     #ifdef XBH_BOARD_VGA_EEPROM_WP_GPIO
     //打开EEPROM WP保护
     XbhService::getModuleInterface()->setGpioOutputValue(XBH_BOARD_VGA_EEPROM_WP_GPIO, XBH_BOARD_VGA_EEPROM_WP_ON);
-    #else  
-    return XBH_FAILURE;
     #endif
+    XLOGD("Set edid successful");
+
+    usleep(10 * 1000);
+    XBH_S32 checksum[10] = {0};
+    getVgaEdidCheckSum(XBH_SOURCE_VGA1, checksum);
 
     return s32Ret;
 }
 
 XBH_S32 XbhVgaEdidManager::setVgaEdidData(XBH_U8 edid_data[128], XBH_SOURCE_E idx)
 {
-    XLOGE("VGA_EDID in upgrade mode\n");
+    XLOGD("VGA_EDID in upgrade mode");
     XBH_S32 s32Ret = XBH_FAILURE;
     idx = XBH_SOURCE_VGA1;
 
@@ -115,7 +124,7 @@ XBH_S32 XbhVgaEdidManager::setVgaEdidData(XBH_U8 edid_data[128], XBH_SOURCE_E id
         XBH_CHAR strSn[64] = {0};
         XbhPartitionData::getInstance()->getSmartSnData(strSn);
         int length = strlen(strSn);
-        XLOGD("%s\n",strSn);
+        XLOGD("%s ",strSn);
         if(length == XBH_CUSDATA_SMART_SN_REAL_LEN )
         {
             std::string serial(strSn);
@@ -133,7 +142,7 @@ XBH_S32 XbhVgaEdidManager::setVgaEdidData(XBH_U8 edid_data[128], XBH_SOURCE_E id
             XBH_U32 week = std::stoi(week_str) << 19;
             XBH_U32 product = (product_str[0] - 'A') << 14;
             XBH_U32 sn = std::stoi(sn_str);
-            XLOGD("stage = %d| year=%d | week=%d | product=%d | sn=%d  \n", (stage_str[0] - '0'),(year_str[0] - 'A'),std::stoi(week_str) ,(product_str[0] - 'A'),std::stoi(sn_str));
+            XLOGD("stage = %d| year=%d | week=%d | product=%d | sn=%d ", (stage_str[0] - '0'),(year_str[0] - 'A'),std::stoi(week_str) ,(product_str[0] - 'A'),std::stoi(sn_str));
             // 合成 final_serial
             XBH_U32 final_serial = stage | year | week | product | sn;
             //
@@ -160,15 +169,15 @@ XBH_S32 XbhVgaEdidManager::setVgaEdidData(XBH_U8 edid_data[128], XBH_SOURCE_E id
     #ifdef XBH_BOARD_VGA_EEPROM_WP_GPIO
     //关闭EEPROM WP保护
     XbhService::getModuleInterface()->setGpioOutputValue(XBH_BOARD_VGA_EEPROM_WP_GPIO, XBH_BOARD_VGA_EEPROM_WP_OFF);
-    #else  
+    #else
+    XLOGE("no defined XBH_BOARD_VGA_EEPROM_WP_GPIO");
     return XBH_FAILURE;
     #endif
-
     usleep(10 * 1000);
-
-    // 按Byte方式写入EDID
-    for (int i = 0; i < 128; i++)
+    XLOGD("Set edid start !!! ");
+    for(int i = 0; i < 128; i ++)
     {
+        // 按Byte方式写入EDID
         #ifdef VGA_EEPROM_I2C_BUS
         //使用标准iic
         s32Ret = XbhService::getPlatformInterface()->setIICData(VGA_EEPROM_I2C_BUS, VGA_EEPROM_I2C_ADDR, i, 1, 1, &edid_data[i]);
@@ -176,81 +185,73 @@ XBH_S32 XbhVgaEdidManager::setVgaEdidData(XBH_U8 edid_data[128], XBH_SOURCE_E id
         //使用模拟iic
         s32Ret = XbhService::getModuleInterface()->setVgaEdidI2cData(i, &edid_data[i], 1);
         #endif
-        usleep(10 * 1000);
         if (s32Ret != XBH_SUCCESS)
         {
             XLOGE("Set edid failed, return");
-
             #ifdef XBH_BOARD_VGA_EEPROM_WP_GPIO
             //打开EEPROM WP保护
             XbhService::getModuleInterface()->setGpioOutputValue(XBH_BOARD_VGA_EEPROM_WP_GPIO, XBH_BOARD_VGA_EEPROM_WP_ON);
             #endif
             return s32Ret;
         }
+        usleep(10 * 1000);
     }
-    XLOGD("Set edid successful");
-
+    usleep(10 * 1000);
     #ifdef XBH_BOARD_VGA_EEPROM_WP_GPIO
     //打开EEPROM WP保护
     XbhService::getModuleInterface()->setGpioOutputValue(XBH_BOARD_VGA_EEPROM_WP_GPIO, XBH_BOARD_VGA_EEPROM_WP_ON);
-    #else  
-    return XBH_FAILURE;
     #endif
+    XLOGD("Set edid successful");
+
+    usleep(10 * 1000);
+    XBH_S32 checksum[10] = {0};
+    getVgaEdidCheckSum(XBH_SOURCE_VGA1, checksum);
 
     return s32Ret;
 }
 
 XBH_S32 XbhVgaEdidManager::dumpEdid()
 {
-    XLOGD("Print edid mode");
+    XLOGD("Print edid data");
     XBH_S32 s32Ret = XBH_FAILURE;
     XBH_U8 dataBuf[128] = {0};
     #ifdef XBH_BOARD_VGA_EEPROM_WP_GPIO
     //关闭EEPROM WP保护
     XbhService::getModuleInterface()->setGpioOutputValue(XBH_BOARD_VGA_EEPROM_WP_GPIO, XBH_BOARD_VGA_EEPROM_WP_OFF);
     #else
-    XLOGD("no defined XBH_BOARD_VGA_EEPROM_WP_GPIO\n");
+    XLOGE("no defined XBH_BOARD_VGA_EEPROM_WP_GPIO");
     return XBH_FAILURE;
     #endif
 
-    for (int i = 0; i < sizeof(dataBuf); i++)
+    #ifdef VGA_EEPROM_I2C_BUS
+    //使用标准iic
+    s32Ret = XbhService::getPlatformInterface()->getIICData(VGA_EEPROM_I2C_BUS, VGA_EEPROM_I2C_ADDR, 0, 1, 128, dataBuf);
+    #else
+    //使用模拟iic
+    s32Ret = XbhService::getModuleInterface()->getVgaEdidI2cData(0, dataBuf, 128);
+    #endif
+    if (s32Ret != XBH_SUCCESS)
     {
-        #ifdef VGA_EEPROM_I2C_BUS
-        //使用标准iic
-        s32Ret = XbhService::getPlatformInterface()->getIICData(VGA_EEPROM_I2C_BUS, VGA_EEPROM_I2C_ADDR, i, 1, 1, dataBuf + i);
-        #else
-        //使用模拟iic
-        s32Ret = XbhService::getModuleInterface()->getVgaEdidI2cData(i, dataBuf + i, 1);
+        XLOGE("Get edid fail, return");
+        #ifdef XBH_BOARD_VGA_EEPROM_WP_GPIO
+        //打开EEPROM WP保护
+        XbhService::getModuleInterface()->setGpioOutputValue(XBH_BOARD_VGA_EEPROM_WP_GPIO, XBH_BOARD_VGA_EEPROM_WP_ON);
         #endif
-        if (s32Ret != XBH_SUCCESS)
-        {
-            XLOGE("Get edid fail, return");
-            #ifdef XBH_BOARD_VGA_EEPROM_WP_GPIO
-            //打开EEPROM WP保护
-            XbhService::getModuleInterface()->setGpioOutputValue(XBH_BOARD_VGA_EEPROM_WP_GPIO, XBH_BOARD_VGA_EEPROM_WP_ON);
-            #endif
-            return s32Ret;
-        }
-        else
-        {   
-            if (i%16 == 0)
-            {
-                XLOGD("Get edid success,file edid num: ");
-            }
-            XLOGD("%2x",dataBuf[i]);
-            if (i % 15 == 0 && i !=0) 
-            {  
-                printf("\n");
-            }
-        }
+        return s32Ret;
     }
     #ifdef XBH_BOARD_VGA_EEPROM_WP_GPIO
     //打开EEPROM WP保护
     XbhService::getModuleInterface()->setGpioOutputValue(XBH_BOARD_VGA_EEPROM_WP_GPIO, XBH_BOARD_VGA_EEPROM_WP_ON);
-    #else
-    XLOGD("no defined XBH_BOARD_VGA_EEPROM_WP_GPIO\n");
-    return XBH_FAILURE;
     #endif
+    XLOGD("Get edid success, data : ");
+
+    for(int i = 0; i < 8; i ++)
+    {
+        XLOGI("==>> %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x %02x", dataBuf[i * 16 + 0], dataBuf[i * 16 + 1], dataBuf[i * 16 + 2], dataBuf[i * 16 + 3], dataBuf[i * 16 + 4], 
+                                                                                                      dataBuf[i * 16 + 5], dataBuf[i * 16 + 6], dataBuf[i * 16 + 7], dataBuf[i * 16 + 8], dataBuf[i * 16 + 9], 
+                                                                                                      dataBuf[i * 16 + 10], dataBuf[i * 16 + 11], dataBuf[i * 16 + 12], dataBuf[i * 16 + 13], dataBuf[i * 16 + 14],
+                                                                                                      dataBuf[i * 16 + 15]);
+    }
     
     return s32Ret;
 }
@@ -268,31 +269,32 @@ XBH_S32 XbhVgaEdidManager::getVgaEdidStatus(XBH_SOURCE_E idx, XBH_BOOL* bEnable)
     //关闭EEPROM WP保护
     XbhService::getModuleInterface()->setGpioOutputValue(XBH_BOARD_VGA_EEPROM_WP_GPIO, XBH_BOARD_VGA_EEPROM_WP_OFF);
     #else
-    XLOGD("no defined XBH_BOARD_VGA_EEPROM_WP_GPIO\n");
+    XLOGE("no defined XBH_BOARD_VGA_EEPROM_WP_GPIO");
     return XBH_FAILURE;
     #endif
 
-    for (int i = 0; i < sizeof(dataBuf); i++)
+    // 获取EDID
+    #ifdef VGA_EEPROM_I2C_BUS
+    //使用标准iic
+    s32Ret = XbhService::getPlatformInterface()->getIICData(VGA_EEPROM_I2C_BUS, VGA_EEPROM_I2C_ADDR, 0, 1, 128, dataBuf);
+    #else
+    //使用模拟iic
+    s32Ret = XbhService::getModuleInterface()->getVgaEdidI2cData(0, dataBuf, 128);
+    #endif
+    if (s32Ret != XBH_SUCCESS)
     {
-        // 获取EDID
-        #ifdef VGA_EEPROM_I2C_BUS
-        //使用标准iic
-        s32Ret = XbhService::getPlatformInterface()->getIICData(VGA_EEPROM_I2C_BUS, VGA_EEPROM_I2C_ADDR, i, 1, 1, dataBuf + i);
-        #else
-        //使用模拟iic
-        s32Ret = XbhService::getModuleInterface()->getVgaEdidI2cData(i, dataBuf + i, 1);
+        XLOGE("Get edid fail, return");
+        #ifdef XBH_BOARD_VGA_EEPROM_WP_GPIO
+        //打开EEPROM WP保护
+        XbhService::getModuleInterface()->setGpioOutputValue(XBH_BOARD_VGA_EEPROM_WP_GPIO, XBH_BOARD_VGA_EEPROM_WP_ON);
         #endif
-        if (s32Ret != XBH_SUCCESS)
-        {
-            XLOGE("Get edid fail, return");
-            #ifdef XBH_BOARD_VGA_EEPROM_WP_GPIO
-            //打开EEPROM WP保护
-            XbhService::getModuleInterface()->setGpioOutputValue(XBH_BOARD_VGA_EEPROM_WP_GPIO, XBH_BOARD_VGA_EEPROM_WP_ON);
-            #endif
-            return s32Ret;
-        }
+        return s32Ret;
     }
-    XLOGE("Get edid success");
+    #ifdef XBH_BOARD_VGA_EEPROM_WP_GPIO
+    //打开EEPROM WP保护
+    XbhService::getModuleInterface()->setGpioOutputValue(XBH_BOARD_VGA_EEPROM_WP_GPIO, XBH_BOARD_VGA_EEPROM_WP_ON);
+    #endif
+    XLOGD("Get edid success");
     
     //验证
     for(index = 0; index < sizeof(dataBuf) -1; index++)
@@ -303,75 +305,68 @@ XBH_S32 XbhVgaEdidManager::getVgaEdidStatus(XBH_SOURCE_E idx, XBH_BOOL* bEnable)
     if(dataBuf[sizeof(dataBuf) - 1] == 256 - (checksum % 256))
     {
         *bEnable = XBH_TRUE;
-        XLOGE("Edid checksum 0x%x, success!\n!!!", checksum);
+        XLOGD("Edid checksum 0x%x, success!", checksum);
     }
     else
     {
         *bEnable = XBH_FALSE;
-        XLOGE("Edid checksum 0x%x, fail!\n!!!", checksum);
+        XLOGE("Edid checksum 0x%x, fail!", checksum);
     }
-    #ifdef XBH_BOARD_VGA_EEPROM_WP_GPIO
-    //打开EEPROM WP保护
-    XbhService::getModuleInterface()->setGpioOutputValue(XBH_BOARD_VGA_EEPROM_WP_GPIO, XBH_BOARD_VGA_EEPROM_WP_ON);
-    #else
-    XLOGD("no defined XBH_BOARD_VGA_EEPROM_WP_GPIO\n");
-    return XBH_FAILURE;
-    #endif
     return s32Ret;
 }
 
 XBH_S32 XbhVgaEdidManager::getVgaEdidCheckSum(XBH_SOURCE_E idx, XBH_S32* checksum)
 {
-    XLOGD("Read edid mode");
+    XLOGD("Read edid checksum");
     idx = XBH_SOURCE_VGA1;    
     XBH_S32 s32Ret = XBH_FAILURE;
     XBH_U8 index = 0;
     XBH_U8 dataBuf[128] = {0};
+    XBH_CHAR checksum_str[10] = {0};
     
     #ifdef XBH_BOARD_VGA_EEPROM_WP_GPIO
     //关闭EEPROM WP保护
     XbhService::getModuleInterface()->setGpioOutputValue(XBH_BOARD_VGA_EEPROM_WP_GPIO, XBH_BOARD_VGA_EEPROM_WP_OFF);
     #else
-    XLOGD("no defined XBH_BOARD_VGA_EEPROM_WP_GPIO\n");
+    XLOGE("no defined XBH_BOARD_VGA_EEPROM_WP_GPIO");
     return XBH_FAILURE;
     #endif
 
-    for (int i = 0; i < sizeof(dataBuf); i++)
+    // 获取EDID
+    #ifdef VGA_EEPROM_I2C_BUS
+    //使用标准iic
+    s32Ret = XbhService::getPlatformInterface()->getIICData(VGA_EEPROM_I2C_BUS, VGA_EEPROM_I2C_ADDR, 0, 1, 128, dataBuf);
+    #else
+    //使用模拟iic
+    s32Ret = XbhService::getModuleInterface()->getVgaEdidI2cData(0, dataBuf, 128);
+    #endif
+    if (s32Ret != XBH_SUCCESS)
     {
-        // 获取EDID
-        #ifdef VGA_EEPROM_I2C_BUS
-        //使用标准iic
-        s32Ret = XbhService::getPlatformInterface()->getIICData(VGA_EEPROM_I2C_BUS, VGA_EEPROM_I2C_ADDR, i, 1, 1, dataBuf + i);
-        #else
-        //使用模拟iic
-        s32Ret = XbhService::getModuleInterface()->getVgaEdidI2cData(i, dataBuf + i, 1);
+        XLOGE("Get edid fail, return");
+        #ifdef XBH_BOARD_VGA_EEPROM_WP_GPIO
+        //打开EEPROM WP保护
+        XbhService::getModuleInterface()->setGpioOutputValue(XBH_BOARD_VGA_EEPROM_WP_GPIO, XBH_BOARD_VGA_EEPROM_WP_ON);
         #endif
-        if (s32Ret != XBH_SUCCESS)
-        {
-            XLOGE("Get edid fail, return");
-            #ifdef XBH_BOARD_VGA_EEPROM_WP_GPIO
-            //打开EEPROM WP保护
-            XbhService::getModuleInterface()->setGpioOutputValue(XBH_BOARD_VGA_EEPROM_WP_GPIO, XBH_BOARD_VGA_EEPROM_WP_ON);
-            #endif
-            return s32Ret;
-        }
+        return s32Ret;
     }
+
     #ifdef XBH_BOARD_VGA_EEPROM_WP_GPIO
     //打开EEPROM WP保护
     XbhService::getModuleInterface()->setGpioOutputValue(XBH_BOARD_VGA_EEPROM_WP_GPIO, XBH_BOARD_VGA_EEPROM_WP_ON);
-    #else
-    XLOGD("no defined XBH_BOARD_VGA_EEPROM_WP_GPIO\n");
-    return XBH_FAILURE;
     #endif
-    XLOGE("Get edid success");
+
+    XLOGD("Get edid success");
     *checksum = dataBuf[127];
+    sprintf(checksum_str, "%02x", *checksum);
+    XLOGD("Edid checksum_str = %s ", checksum_str);
+    property_set("persist.vendor.xbh.vga_edid.ver", checksum_str);
     return s32Ret;
 }
 
 void XbhVgaEdidManager::run(const void* arg)
 {
     //XLOGD(" begin run ");
-    XLOGE("VGA_EDID in upgrade mode!\n");
+    XLOGD("VGA_EDID in upgrade mode!");
     //XBH_SOURCE_E idx;
     //XBH_BOOL* bEnable;
     //XBH_CHAR * strPath;

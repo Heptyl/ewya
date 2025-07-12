@@ -2,6 +2,7 @@ LOCAL_PATH := $(call my-dir)
 
 ## board define
 XMH610A := 1
+XMH610B := 2
 MY_BOARD := ${XMH610A}
 
 ###################### libeywa [Start] ################
@@ -14,6 +15,7 @@ LOCAL_CFLAGS += -DBUILD_DATE="\"$(BUILD_DATE)\""
 
 ## board marco define
 LOCAL_CFLAGS += -DXMH610A=${XMH610A}
+LOCAL_CFLAGS += -DXMH610B=${XMH610B}
 
 LOCAL_MODULE := libeywa
 LOCAL_MODULE_TAGS := optional
@@ -37,6 +39,10 @@ eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/hisilicon/hi610/*.cpp)
 ifeq (${MY_BOARD}, ${XMH610A})
 $(info ======================================= Building on A board)
 eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/hisilicon/hi610/board/XbhXMH610_A.cpp)
+endif
+ifeq (${MY_BOARD}, ${XMH610B})
+$(info ======================================= Building on B board)
+eywa_src_list += $(wildcard $(LOCAL_PATH)/platform/hisilicon/hi610/board/XbhXMH610_B.cpp)
 endif
 
 LOCAL_SRC_FILES := $(eywa_src_list:$(LOCAL_PATH)/%=%)
@@ -114,7 +120,8 @@ LOCAL_SHARED_LIBRARIES := \
     libuapi_vo \
     libuapi_pq \
     libuapi_common \
-    libuapi_uart
+    libuapi_uart \
+    libusb
 
 #ALL_DEFAULT_INSTALLED_MODULES += $(LOCAL_MODULE)
 include $(BUILD_SHARED_LIBRARY)

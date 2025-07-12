@@ -49,6 +49,9 @@ endif
 #使用hal层的接口来检测信号状态，如果不定义就是使用JAVA/kotlin API来实现
 LOCAL_CFLAGS += -DXBH_USE_HAL_API_TO_CHECK_SIGNAL_STATUS
 
+#9679之前的版本向partitiondata写入数据时有的没有写入CRC数据，导致CRC校验失败，因此此方案不做CRC校验
+LOCAL_CFLAGS += -DXBH_NO_NEED_CRC
+
 #引入logic里面参与编译的代码
 include $(LOCAL_PATH)/common.mk
 
@@ -127,7 +130,8 @@ LOCAL_SHARED_LIBRARIES := \
     libmi3_ipc_common \
     libmi3_mi_hal \
     libmi3_c2_hal \
-    libms9282
+    libms9282 \
+    libusb
 
 #ALL_DEFAULT_INSTALLED_MODULES += $(LOCAL_MODULE)
 include $(BUILD_SHARED_LIBRARY)

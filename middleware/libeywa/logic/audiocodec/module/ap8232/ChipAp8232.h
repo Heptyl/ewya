@@ -54,6 +54,9 @@ public:
     XBH_S32 getMicHowling(XBH_BOOL* enable);
     XBH_S32 getChipInitDone(XBH_BOOL* enable);
     XBH_S32 getChipExist(XBH_BOOL* enable);
+    XBH_S32 setLineOutMode(XBH_LINEOUT_MODE_E enLineOutMode);
+    XBH_S32 getLineOutMode(XBH_LINEOUT_MODE_E* enLineOutMode);
+
 public:
 
     //固件升级前SPI flah 的执行结果
@@ -116,6 +119,7 @@ private:
     XBH_BOOL m_bChipExsit;
     XBH_BOOL m_bMicMute;
     XBH_BOOL m_bHpMute;
+    XBH_BOOL mUpdateEnd;
 };
 
 #endif //XBH_CHIP_AP8232_H

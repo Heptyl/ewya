@@ -13,6 +13,7 @@
 #include <cstring>
 #include <fstream>
 #include <hardware/board.h>
+#include <cutils/properties.h>
 
 XbhMutex                 Gd32f305rb::mLock;
 
@@ -204,10 +205,10 @@ XBH_S32 Gd32f305rb::set_iap_status(XBH_U8 status)
 XBH_S32 Gd32f305rb::upgrade_download_data(XBH_U8 *buff, XBH_U32 length)
 {
     XBH_S32 s32Ret = XBH_SUCCESS;
-    XBH_U16 fileSize = length;
+    XBH_U32 fileSize = length;
     XBH_U32 address = 0;
-    XBH_U16 fileindex = 0;
-    XBH_U16 dataLen = 0;
+    XBH_U32 fileindex = 0;
+    XBH_U32 dataLen = 0;
     XBH_U8  w_buff[128];
     static int n = 0;
 
@@ -257,6 +258,7 @@ XBH_S32 Gd32f305rb::upgrade_download_data(XBH_U8 *buff, XBH_U32 length)
 
 XBH_S32 Gd32f305rb::upgradetask(void)
 {
+    XbhMutex::Autolock _l(mLock);
     XBH_S32 s32Ret = XBH_SUCCESS;
 
     XBH_U32 u32FileSize = 0;
@@ -267,6 +269,7 @@ XBH_S32 Gd32f305rb::upgradetask(void)
 
     //set task status
     mState = XBH_UPGRADE_RUNNING;
+    property_set("persist.vendor.xbh.gd32.ver", "");
 
     //---------------------- open gd32 file ----------------------
     XLOGD("---> open upgrade file ");
@@ -355,6 +358,7 @@ XBH_S32 Gd32f305rb::upgradetask(void)
     XLOGD("upgrade finish!");
     free(pU8FileBuff);
     fclose(pFile);
+
     mState = XBH_UPGRADE_SUCCESS;
 
     return s32Ret;
@@ -373,6 +377,7 @@ XBH_S32 Gd32f305rb::getFirmwareVersion(XBH_CHAR* strVersion)
             sprintf (strVersion, "v.%02x%02x%02x", buf[0], buf[1], buf[2]);
         }
         XLOGE("mcu version = %d.%d.%d", buf[0], buf[1], buf[2]);
+        property_set("persist.vendor.xbh.gd32.ver", strVersion);
     } else {
         XLOGE("ERROR: get mcu app ver\n");
         s32Ret = XBH_FAILURE;
@@ -504,8 +509,8 @@ XBH_S32 Gd32f305rb::getMcuUartBypass(XBH_U8 u8Len, XBH_U8* u8Data)
 
 void Gd32f305rb::run(const void* arg)
 {
-    XbhMutex::Autolock _l(mLock);
     XBH_S32 s32Ret = XBH_SUCCESS;
+    XBH_CHAR* FWVer = (char *)malloc(10);
     if (mUpgradeStatus == 1)
     {
         s32Ret = upgradetask();
@@ -513,6 +518,10 @@ void Gd32f305rb::run(const void* arg)
         {
             XLOGD("upgrade error!");
         }
+
+        usleep(3 * 1000 * 1000);
+        getFirmwareVersion(FWVer);
+        free(FWVer);
         mUpgradeStatus = 0;
     }
 }

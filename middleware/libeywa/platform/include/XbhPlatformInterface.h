@@ -248,6 +248,34 @@ public:
      * retval 0:success,-1:failure
     */
     virtual XBH_S32 getColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data);
+    /**
+     * 保存对应模式的具体色温数据，保存到cusdata分区
+     * param[in] enColorTemp. 色温模式
+     * param[in] data. 色温参数
+     * retval 0:success,-1:failure
+    */
+    virtual XBH_S32 setAndroidColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data);
+    /**
+     * 获取android对应模式的具体色温数据
+     * param[in] enColorTemp. 色温模式
+     * param[out] data. 色温参数
+     * retval 0:success,-1:failure
+    */
+    virtual XBH_S32 getAndroidColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data);
+    /**
+     * 保存android对应模式的具体色温数据，保存到cusdata分区
+     * param[in] enColorTemp. 色温模式
+     * param[in] data. 色温参数
+     * retval 0:success,-1:failure
+    */
+    virtual XBH_S32 saveColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data);
+    /**
+     * 读取对应模式的具体色温数据，从cusdata分区读取
+     * param[in] enColorTemp. 色温模式
+     * param[out] data. 色温参数
+     * retval 0:success,-1:failure
+    */
+    virtual XBH_S32 loadColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data);
 
     /******************************************************************************AUDIO***********************************************************/
     /**
@@ -364,12 +392,13 @@ public:
     virtual XBH_S32 getPreScale(XBH_S32* s32Value);
     /**
      * 设置音频输出的前置增益
-     * param[in] enEqMode. EQ阶段，s32Value 增益值
+     * param[in] enEqMode. EQ阶段
+     * param[out] s32Value. 增益值
      * retval 0:success,-1:failure
     */
     virtual XBH_S32 setAudioEq(XBH_EQ_MODE_E enEqMode, XBH_S32 s32Value);
     /**
-     * 设置音频输出的前置增益
+     * 获取音频输出的前置增益
      * param[in] enEqMode. EQ阶段
      * param[out] s32Value. 增益值
      * retval 0:success,-1:failure
@@ -692,6 +721,14 @@ public:
      * get hdmi rx audio sample freq
     */
     virtual XBH_S32 getHdmiRxAudioSampleFreq(XBH_U32 *u32Data);
+    /**
+     * get hdmi rx edid invaild
+    */
+    virtual XBH_S32 getEdidInvaild(XBH_HDMIRX_EDID_TYPE_E edidType, XBH_U8 *edidInvaild);
+    /**
+     * get hdmi rx audio locked status
+    */
+    virtual XBH_S32 getHdmiRxAudioLocked(XBH_U32 *u32Data);
     /******************************************************************************SYSTEM***********************************************************/
     /**
      * 获取唤醒原因
@@ -746,6 +783,31 @@ public:
      * retval 0:success,-1:failure
     */
     virtual XBH_S32 getWoTStatus(XBH_WAKEUP_E enWakeUpType, XBH_BOOL* bEnable);
+    /**
+     * 设置故障检测的开关
+     * param[in] bEnable 检测开关
+     * param[in] enDetectType 检测类型
+     * retval 0:success,-1:failure
+    */
+    virtual XBH_S32 setErrorDetectState(XBH_BOOL bEnable, XBH_U32 enDetectType);
+    /**
+     * 获取故障检测的开关
+     * param[out] bEnable 检测开关
+     * param[out] enDetectType 检测类型
+     * retval 0:success,-1:failure
+    */
+    virtual XBH_S32 getErrorDetectState(XBH_BOOL* bEnable, XBH_U32* enDetectType);
+    /**
+     * 获取故障码
+     * param[out] u32ErrorCode
+     * retval 0:success,-1:failure
+    */
+    virtual XBH_S32 getErrorCode(XBH_U32* u32ErrorCode);
+    /**
+     * 清除故障码
+     * retval 0:success,-1:failure
+    */
+    virtual XBH_S32 clearErrorCode(void);
     /**
      * 设置系统运行的时长，此记录不会因为升级而被擦除掉
      * param[in] time 运行时间
@@ -1006,6 +1068,39 @@ public:
     */
     virtual XBH_S32 getSn(XBH_CHAR* strSn);
     /**
+    * 写入分区数据
+    * param[in] pBuff 要写入的实际数据
+    * retval 0:success,-1:failure
+    */
+    virtual XBH_S32 setCustProductInfo(const XBH_CHAR* pBUf);
+    /**
+    * 读取分区数据
+    * param[in] pBuff 要读取的实际数据
+    * retval 0:success,-1:failure
+    */
+    virtual XBH_S32 getCustProductInfo(XBH_CHAR* pBUff);
+    /**
+    * 获取指定通道的唤醒引脚状态
+    * param[in] enSource 要指定通道
+    *param[out] bEnable 唤醒信号状态
+    * retval 0:success,-1:failure
+    */
+    virtual XBH_S32 getOpsWakeSoc(XBH_BOOL *bEnable, XBH_SOURCE_E enSource);
+    /**
+    * 获取指定通道的ops运行状态
+    * param[in] enSource 指定通道
+    *param[out] bEnable :ture 低电平,false 高电平
+    * retval 0:success,-1:failure
+    */
+    virtual XBH_S32 getOpsOperationStatus(XBH_BOOL *bEnable, XBH_SOURCE_E enSource);
+    /**
+    * 设置指定通道的recovery控制引脚电平
+    * param[in] enSource 指定通道
+    *param[in] bEnable :ture 低电平,false 高电平
+    * retval 0:success,-1:failure
+    */
+    virtual XBH_S32 setOpsRecovery(XBH_BOOL bEnable, XBH_SOURCE_E enSource);
+    /**
      * 写入HDCP
      * param[in] strPath 写入HDCP的文件路径
      * param[in] type    写入HDCP的类型
@@ -1194,6 +1289,16 @@ public:
     */
     virtual XBH_S32 getUsbcConfig(XBH_S32* type);
     /**
+     * 获取OTG端口是HOST模式还是DEVICE模式, TYPE-B以及TYPE-C in/out端子均可连接SOC OTG，因方案各异
+     * retval 0:success,-1:failure
+    */
+    virtual XBH_S32 getHostOrDeviceStatus(XBH_S32* type);
+    /**
+     * 设置OTG端口是HOST模式还是DEVICE模式, TYPE-B以及TYPE-C in/out端子均可连接SOC OTG，因方案各异
+     * retval 0:success,-1:failure
+    */
+    virtual XBH_S32 setHostOrDeviceStatus(XBH_S32 type);
+    /**
      * setMokaPModeEnableToCusdata
      * @param 
      * @return 
@@ -1204,6 +1309,74 @@ public:
      * @return 
      */
     virtual XBH_S32 getMokaPModeEnableFromCusdata(XBH_S32 *u32Value);
+    /**
+     * getUSBCForwardReverseInsertionDet
+     * @return 
+     */
+     virtual XBH_S32 getUSBCForwardReverseInsertionDet(XBH_SOURCE_E idx, XBH_S32 *u32Value);
+
+     /**
+     * setMultiUser
+     * @return
+     */
+     virtual XBH_S32 setMultiUser(const XBH_CHAR* status);
+
+     /**
+     * getMultiUser
+     * @return
+     */
+     virtual XBH_S32 getMultiUser(XBH_CHAR* status);
+
+     /**
+     * setVSPage
+     * @return
+     */
+     virtual XBH_S32 setVSPage(const XBH_CHAR* status);
+
+     /**
+     * getVSPage
+     * @return
+     */
+     virtual XBH_S32 getVSPage(XBH_CHAR* status);
+
+     /**
+     * setCustomSKU
+     * @return
+     */
+     virtual XBH_S32 setCustomSKU(const XBH_CHAR* status);
+
+     /**
+     * getCustomSKU
+     * @return
+     */
+     virtual XBH_S32 getCustomSKU(XBH_CHAR* status);
+
+     /**
+     * setBootMode
+     * @return
+     */
+     virtual XBH_S32 setBootMode(const XBH_CHAR* status);
+
+     /**
+     * getBootMode
+     * @return
+     */
+     virtual XBH_S32 getBootMode(XBH_CHAR* status);
+
+    /**
+    * 写入HISI的HVB的key信息，并使能安全芯片
+    * 只支持一次写入，写入后无法撤消
+    * 使用能安全芯片后，无法退回，key不对的软件将无法升级
+    * retval 0:success,-1:failure
+    */
+    virtual XBH_S32 setSecurityHvbKey();
+
+    /**
+    * 获取hisi芯片的安全芯片使能状态
+    * param[out] u32Status 使用能状态 0：未使用，1：已使能
+    * retval 0:success,-1:failure
+    */
+    virtual XBH_S32 getSecurityHvbKeyStatus(XBH_U32 *u32Status);
 
     /******************************************************************************DEVICE***********************************************************/
     /**
@@ -1966,6 +2139,12 @@ public:
     virtual XBH_S32 getRkpStatus(XBH_CHAR* data);
 
     /**
+    * 板控升级前的准备工作 prepareIncreaseBinUpgrade
+    * retval 0:success,-1:failure
+    */
+    virtual XBH_S32 prepareIncreaseBinUpgrade();
+
+    /**
      * smart工厂需要存储产品的PN码，一个系列对应一个PN码
      * param[in] data 数据
      * retval 0:success,-1:failure
@@ -2149,7 +2328,83 @@ public:
     * retval 0:success,-1:failure
     */
     virtual XBH_S32 getFlashEepData(std::string &pBuff);
+/**********************************************************************************************OPS Bypass************************************************************************************************/
+    /**
+    * 获取OPS回传的数据情况
+    * param[out] OPS回传数据
+    * retval 0:success,-1:failure
+    */
+    virtual XBH_S32 getOPSBypassDataLen(XBH_U8* u8Data);
 
+    /**
+    * OPS透传数据
+    * param[in] OPS类型
+    * param[in] 数据长度
+    * param[out] OPS回传数据
+    * retval 0:success,-1:failure
+    */
+    virtual XBH_S32 SendOPSBypassData(XBH_SOURCE_E type, XBH_U8 u8Len, XBH_U8* u8Data);
+
+    /*
+    * 获取edid机型名
+    * param[in] pBuff 要读取的实际数据
+    * retval 0:success,-1:failure
+    */
+    virtual XBH_S32 getEdidModelName(std::string &pBuff);
+
+    /*
+    * 获取edid序列号
+    * param[in] serialArr 序列号buff
+    * retval 0:success,-1:failure
+    */
+    virtual XBH_S32 getEdidSn(std::string &pBuff);
+    /**
+    * 将作为参考的RTC数据保存到不可擦除分区
+    * param[in] RTC数据
+    * retval 0:success,-1:failure
+    */
+    virtual XBH_S32 setReferRTCInfo(const XBH_CHAR* pBuff);
+    /**
+    * 从不可擦除分区读取作为参考的RTC数据
+    * param[out] 回传数据
+    * retval 0:success,-1:failure
+    */
+    virtual XBH_S32 getReferRTCInfo(XBH_CHAR* pBuff);
+
+    /**
+    * 通过读取节点获取KTC触摸框必要信息绕过EDLA权限问题
+    * param[out] 回传数据
+    * retval 0:success,-1:failure
+    */
+    virtual XBH_S32 getKtcTouchInfo(XBH_CHAR* pBuff);
+    /**
+    * 通过去读取lic_status去获取授权的状态
+    * param[out] 回传数据
+    * retval 0:success,-1:failure
+    */
+    virtual XBH_S32 getMicLicenseState(XBH_S32* status);
+
+    /**
+     * 获取EMMC版本
+     * @param pu32Version [out] 返回EMMC版本号(16进制)
+     * @return XBH_SUCCESS 成功，XBH_FAILURE 失败
+     */
+    virtual XBH_S32 getEmmcVersion(XBH_U32 *pu32Version);
+
+    /**
+     * 获取EMMC寿命（返回MLC和SLC中的最大值）
+     * @param pu32LifeTime [out] 返回EMMC寿命值(16进制)
+     * @return XBH_SUCCESS 成功，XBH_FAILURE 失败
+     */
+    virtual XBH_S32 getEmmcLifeTime(XBH_U32 *pu32LifeTime);
+
+    /*
+    * 升级扩展IC
+    * @param data      dataflow
+    * @param force     是否强制升级
+    * @param devType   对应设备类型    
+    */
+    virtual XBH_S32 upgradeExtendIcByData(XBH_U8 *data, XBH_U32 dataLen,XBH_BOOL force, XBH_U32 devType);
 public:
     XbhPlatformInterface(){};
     virtual ~XbhPlatformInterface(){};

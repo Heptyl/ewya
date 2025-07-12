@@ -9,6 +9,7 @@
 #include <iostream>
 #include <cstring>
 #include <fstream>
+#include <cutils/properties.h>
 
 XbhMutex                 Gd32f330r8::mLock;
 
@@ -392,6 +393,8 @@ XBH_S32 Gd32f330r8::MCUUpgrade(XBH_BOOL bForceUpgrade)
 
     //---------------------- enter app mode --------------------------
     XLOGD("---> enter app mode ");
+    mState = GD32_SUCCESS;
+    usleep(4 * 1000 * 1000); //延时4秒后发送进入IAP状态 原因：因为8195U MCU控制供电，如果升级完马上进入iap，则会出现不显示升级成功弹窗直接重启的情况。
     s32Ret = set_iap_status(1);
     if (s32Ret != XBH_SUCCESS)
     {
@@ -406,7 +409,7 @@ XBH_S32 Gd32f330r8::MCUUpgrade(XBH_BOOL bForceUpgrade)
     XLOGD("upgrade finish!");
     free(pU8FileBuff);
     fclose(pFile);
-    mState = GD32_SUCCESS;
+    
     return s32Ret;
 }
 
@@ -462,6 +465,7 @@ XBH_S32 Gd32f330r8::getFirmwareVersion(XBH_CHAR* strVersion)
 
     XLOGD("func[%s] [V%d.%d]\n", __func__, ((mcuVer>>8) & 0xFF), (mcuVer & 0xFF));
     sprintf(strVersion, "%d.%d", ((mcuVer>>8) & 0xFF), (mcuVer & 0xFF));
+    property_set("persist.vendor.xbh.gd32.ver", strVersion);
 
     return s32Ret;
 }
@@ -584,6 +588,7 @@ void Gd32f330r8::run(const void* arg)
     XBH_S32 s32Ret = XBH_SUCCESS;
     if (mUpgradeStatus == 1)
     {
+        property_set("persist.vendor.xbh.gd32.ver", "");
         s32Ret = MCUUpgrade(mForceUpgrade);
         if (s32Ret != XBH_SUCCESS)
         {

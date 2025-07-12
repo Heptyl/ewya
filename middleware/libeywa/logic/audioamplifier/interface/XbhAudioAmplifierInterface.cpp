@@ -171,7 +171,30 @@ XBH_S32 XbhAudioAmplifierInterface::getEqEnable(XBH_BOOL* bEnable)
     XLOGW("this func is not implement");
     return  s32Ret;
 }
-
+/**
+* 设置音频输出的前置增益
+* param[in] enEqMode. EQ阶段
+* param[out] s32Value. 增益值
+* retval 0:success,-1:failure
+*/
+XBH_S32 XbhAudioAmplifierInterface::setAudioEq(XBH_EQ_MODE_E enEqMode, XBH_S32 s32Value)
+{   
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+/**
+* 获取音频输出的前置增益
+* param[in] enEqMode. EQ阶段
+* param[out] s32Value. 增益值
+* retval 0:success,-1:failure
+*/
+XBH_S32 XbhAudioAmplifierInterface::getAudioEq(XBH_EQ_MODE_E enEqMode, XBH_S32* s32Value)
+{   
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
 /**
 * 设置低音增益
 * param[in] s32Value 增益值

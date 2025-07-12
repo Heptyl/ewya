@@ -23,6 +23,7 @@
 
 #define REG_RESET  0xFF09
 #define CMD_RESET  0xA2
+#define CMD_WAKEUP 0xA8
 
 #define REG_HPD_ASSERT_CTRL 0xFF1D
 
@@ -158,6 +159,8 @@ public:
     XBH_S32 getChipExist(XBH_BOOL* enable);
 
     XBH_S32 setSpecificMode(void);
+    /*2202e退出低功耗模式*/
+    XBH_S32 setNormalMode(void);
 
 private:
     XBH_S32 mI2cNumber;

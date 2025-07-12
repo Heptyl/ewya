@@ -41,7 +41,7 @@
 
 #undef XBH_F2U4_HDMI_SWITCH_TABLE
 #define XBH_F2U4_HDMI_SWITCH_TABLE \
-    GSV2705_1 
+    ASW3642
 
 /*
  * struct HDMI_SW_OPT_TABLE{

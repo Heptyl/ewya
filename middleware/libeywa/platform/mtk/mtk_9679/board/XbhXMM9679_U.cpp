@@ -46,12 +46,28 @@ static GPIO_OPT_TABLE source_f_hdmi1_table[] = {
     XBH_F_HDMI1_TABLE
 };
 
+static GPIO_OPT_TABLE source_f_hdmi2_table[] = {
+    XBH_F_HDMI2_TABLE
+};
+
+static GPIO_OPT_TABLE source_f_hdmi3_table[] = {
+    XBH_F_HDMI3_TABLE
+};
+
 static GPIO_OPT_TABLE fct_source_f_usbc1_table[] = {
     XBH_F_USBC1_FCT_TABLE
 };
 
 static GPIO_OPT_TABLE fct_source_f_hdmi1_table[] = {
     XBH_F_HDMI1_FCT_TABLE
+};
+
+static GPIO_OPT_TABLE fct_source_f_hdmi2_table[] = {
+    XBH_F_HDMI2_FCT_TABLE
+};
+
+static GPIO_OPT_TABLE fct_source_f_hdmi3_table[] = {
+    XBH_F_HDMI3_FCT_TABLE
 };
 
 XBH_S32 XbhXMM9679_U::followToFUsbc1(XBH_VOID)
@@ -82,6 +98,34 @@ XBH_S32 XbhXMM9679_U::followToFHdmi1(XBH_VOID)
     return XBH_SUCCESS;
 }
 
+XBH_S32 XbhXMM9679_U::followToFHdmi2(XBH_VOID)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_U8 data[] = {0x00, 0x00};
+    s32Ret = getIICData(3, 0x58, 0xFF3E, 2 ,2 ,data);
+    XBH_U8 Value = 0x01;
+    if(!s32Ret)
+    {
+        setIICData(3, 0x58, 0xFF05, 2, 1, &Value);
+    }
+    SELECT_GPIO_OPT_TABLE(source_f_hdmi2_table);
+    return XBH_SUCCESS;
+}
+
+XBH_S32 XbhXMM9679_U::followToFHdmi3(XBH_VOID)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_U8 data[] = {0x00, 0x00};
+    s32Ret = getIICData(3, 0x58, 0xFF3E, 2 ,2 ,data);
+    XBH_U8 Value = 0x01;
+    if(!s32Ret)
+    {
+        setIICData(3, 0x58, 0xFF05, 2, 1, &Value);
+    }
+    SELECT_GPIO_OPT_TABLE(source_f_hdmi3_table);
+    return XBH_SUCCESS;
+}
+
 XBH_S32 XbhXMM9679_U::getHdmi1Det(XBH_BOOL *enable)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
@@ -106,12 +150,36 @@ XBH_S32 XbhXMM9679_U::getFHdmi1Det(XBH_BOOL *enable)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
     XBH_U32 u32GpioValue;
-    s32Ret = this->XbhMtk_9679::getGpioInputValue(XBH_BOARD_GPIO_F_HDMI_DET, &u32GpioValue);
-    *enable =  u32GpioValue == XBH_BOARD_GPIO_F_HDMI_DET_LEVEL ? XBH_TRUE : XBH_FALSE;
+    s32Ret = this->XbhMtk_9679::getGpioInputValue(XBH_BOARD_GPIO_F_GPIO1, &u32GpioValue);
+    XLOGD("getFHdmi1Det:%d\n",u32GpioValue);
+    *enable =  u32GpioValue == XBH_BOARD_GPIO_F_GPIO1_LEVEL ? XBH_TRUE : XBH_FALSE;
     SourceDetState[XBH_SOURCE_F_HDMI1] = *enable;
     s32Ret = switchSourceHpd(3, XBH_SOURCE_F_HDMI1, XBH_SOURCE_F_USBC1);
     return s32Ret;
 }
+XBH_S32 XbhXMM9679_U::getFHdmi2Det(XBH_BOOL *enable)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_U32 u32GpioValue;
+    s32Ret = this->XbhMtk_9679::getGpioInputValue(XBH_BOARD_GPIO_F_GPIO2, &u32GpioValue);
+    XLOGD("getFHdmi2Det:%d\n",u32GpioValue);
+    *enable =  u32GpioValue == XBH_BOARD_GPIO_F_GPIO2_LEVEL ? XBH_TRUE : XBH_FALSE;
+    SourceDetState[XBH_SOURCE_F_HDMI2] = *enable;
+    s32Ret = switchSourceHpd(3, XBH_SOURCE_F_HDMI2, XBH_SOURCE_F_USBC1);
+    return s32Ret;
+}
+XBH_S32 XbhXMM9679_U::getFHdmi3Det(XBH_BOOL *enable)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XBH_U32 u32GpioValue;
+    s32Ret = this->XbhMtk_9679::getGpioInputValue(XBH_BOARD_GPIO_F_USBC_RST, &u32GpioValue);
+    XLOGD("getFHdmi3Det:%d\n",u32GpioValue);
+    *enable =  u32GpioValue == XBH_BOARD_GPIO_F_USBC_RST_LEVEL ? XBH_TRUE : XBH_FALSE;
+    SourceDetState[XBH_SOURCE_F_HDMI3] = *enable;
+    s32Ret = switchSourceHpd(3, XBH_SOURCE_F_HDMI3, XBH_SOURCE_F_USBC1);
+    return s32Ret;
+}
+
 XBH_S32 XbhXMM9679_U::getVga1Det(XBH_BOOL *enable)
 {
     XBH_S32 s32Ret = XBH_FAILURE;
@@ -293,7 +361,8 @@ XBH_S32 XbhXMM9679_U::getExtendIcVer(XBH_S32 devType, XBH_CHAR* ver)
         case XBH_UPDATE_AUDIO_CODEC:
             s32Ret = XbhAudioCodecManager::getInstance()->getFirmwareVersion(ver);
             break;
-        case XBH_UPDATE_FRONT_GSV2202E: 
+        case XBH_UPDATE_FRONT_GSV2202E:
+        case XBH_UPDATE_FRONT_LT8711UXE1:
             s32Ret = XbhUsbc2HdmiManager::getInstance()->getFirmwareVersion(XBH_SOURCE_F_USBC1, ver);
             break;
         case XBH_UPDATE_FRONT_GSV2712: 
@@ -319,7 +388,8 @@ XBH_S32 XbhXMM9679_U::upgradeExtendIc(const XBH_CHAR* filename, XBH_BOOL force, 
         case XBH_UPDATE_AUDIO_CODEC:
             s32Ret = XbhAudioCodecManager::getInstance()->upgradeFirmware(filename, force);
             break;
-        case XBH_UPDATE_FRONT_GSV2202E: 
+        case XBH_UPDATE_FRONT_GSV2202E:
+        case XBH_UPDATE_FRONT_LT8711UXE1:
             s32Ret = XbhUsbc2HdmiManager::getInstance()->upgradeFirmware(XBH_SOURCE_F_USBC1, filename, force);
             break;
         case XBH_UPDATE_FRONT_GSV2712: 
@@ -346,6 +416,7 @@ XBH_S32 XbhXMM9679_U::getUpgradeExtIcState(XBH_S32 devType, XBH_S32* s32Value)
             s32Ret = XbhAudioCodecManager::getInstance()->getUpgradeState(s32Value);
             break;
         case XBH_UPDATE_FRONT_GSV2202E:
+        case XBH_UPDATE_FRONT_LT8711UXE1:
             s32Ret = XbhUsbc2HdmiManager::getInstance()->getUpgradeState(XBH_SOURCE_F_USBC1, s32Value);
             break;
         case XBH_UPDATE_FRONT_GSV2712:
@@ -759,4 +830,22 @@ XBH_S32 XbhXMM9679_U::getHdmiTxInfo(XBH_HDMI_TX_INFO_E enInfo, XBH_CHAR* info)
     }
 
     return s32Ret;
+}
+XBH_S32 XbhXMM9679_U::setSourcePdAbility(XBH_PDCAPACITY_POWER pdability, XBH_SOURCE_E enSource)
+{
+    XBH_S32 ret = XBH_SUCCESS;
+    if(enSource == XBH_SOURCE_USBC1)
+    {
+        //ret = XbhHdmiSwitchManager::getInstance()->setChargingPower(XBH_UPDATE_BOARD_GSV2715_1, pdability);
+    }
+    else if(enSource == XBH_SOURCE_F_USBC1)
+    {
+        ret = XbhUsbc2HdmiManager::getInstance()->setChargingPower(XBH_SOURCE_F_USBC1, pdability);
+    }
+    else
+    {
+        XLOGE("The 'enSource' parameter is invalid.\n");
+        return XBH_FAILURE;
+    }
+    return ret;
 }

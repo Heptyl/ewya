@@ -365,6 +365,11 @@ XBH_BOOL XbhTouchIsolutionUsb_E::IsNonThroughData(XBH_S32 id, XBH_U32 status, XB
             XLOGD("Down ThroughStatus %d", XBHPiontNonThroughStatus[id]);
         }
     }
+    else if ((status & 0x0f) == Solution_PointStateUp)
+    {
+        XBHPiontNonThroughStatus[id] = 0;
+        XLOGD("Down Through Point Up");
+    }
     else
     {
         ret = XBHPiontNonThroughStatus[id] == 2 ? XBH_FALSE : XBH_TRUE;

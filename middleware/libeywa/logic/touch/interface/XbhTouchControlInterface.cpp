@@ -61,6 +61,16 @@ XBH_S32 XbhTouchControlInterface::setTouchScaleRect(XBH_S32 resolution, XBH_S32 
 }
 
 /**
+ * 设置触摸缩放区域
+ */
+XBH_S32 XbhTouchControlInterface::setTouchScalingRegion(XBH_S32 resolution, XBH_S32 x, XBH_S32 y, XBH_S32 w, XBH_S32 h)
+{
+    XBH_S32 s32Ret = XBH_FAILURE;
+    XLOGW("this func is not implement");
+    return  s32Ret;
+}
+
+/**
  * 发送按键给触摸框，由触摸框转发
  */
 XBH_S32 XbhTouchControlInterface::sendKeyToTp(XBH_U32 keyCode)

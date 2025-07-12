@@ -14,6 +14,8 @@
 #include <cutils/properties.h>
 #include "XbhSysOpt.h"
 
+XbhMutex                        ChipGsv2202E::mLock;
+
 ChipGsv2202E::ChipGsv2202E(XBH_S32 i2cNumber, XBH_S32 i2cAddress, XBH_S32 powerGpio, XBH_S32 powerLevel ,XBH_S32 resetGpio, XBH_S32 resetLevel)
 {
     this->mI2cNumber = i2cNumber;
@@ -38,6 +40,21 @@ ChipGsv2202E::ChipGsv2202E(XBH_S32 i2cNumber, XBH_S32 i2cAddress, XBH_S32 powerG
         XbhService::getModuleInterface()->setGpioOutputValue(mResetGpio, mResetLevel);
         usleep(100 * 1000);
     }
+
+    #if (TYPE_BOARD == XMA311D2T2)
+    {
+       XBH_S32 ret = XBH_FAILURE;
+       usleep(3000 * 1000); //T2项目的2202e子固件在硬复位后，需要延时大概3s后才能读到正确的版本信息
+       ret = setNormalMode();
+       if(ret == XBH_SUCCESS)
+       {
+           XLOGD("setNormalMode: success ");
+       }else
+       {
+           XLOGD("setNormalMode: fail ");
+       }
+    }
+    #endif
     
     XLOGD(" end ");
 }
@@ -189,11 +206,28 @@ XBH_S32 ChipGsv2202E::setSpecificMode(void)
 
 XBH_S32 ChipGsv2202E::getFirmwareVersion(XBH_CHAR* strVersion)
 {
+    XbhMutex::Autolock _l(mLock);
     XBH_S32 s32Ret = XBH_FAILURE;
     XBH_U8 data[] = {0x00, 0x00};
+    //增加容错机制
+    XBH_U8 u8Reset_time = 0;
+RESET:
+    if(u8Reset_time ==3)
+    {
+        XLOGD("getFirmwareVersion  fail !!!");
+        return XBH_FAILURE;
+    }
+    u8Reset_time++;
     s32Ret = XbhService::getModuleInterface()->getI2cData(mI2cNumber, mI2cAddress, REG_FW_VER, 2 ,2 ,data);
+     //XLOGD("getdata  data0[%x] date1[%x] mI2cNumb[%d] mI2cAddr[%x] ", data[0], data[1], mI2cNumber, mI2cAddress);
+    if(s32Ret == XBH_FAILURE || (data[0] == 0 && data[1] == 0))
+    {
+        usleep(500*1000);
+        goto RESET;
+    }
     sprintf(strVersion, "%02X%02X", data[0], data[1]);
     XLOGD("getFirmwareVersion  =  %s",strVersion);
+    property_set("persist.vendor.xbh.gsv2202e.ver", strVersion);
     return s32Ret;
 }
 
@@ -511,6 +545,48 @@ app_start:
     return 1;
 }
 
+ /*
+ * gsv2202e退出低功耗模式
+ * @return XBH_SUCCESS 退出低功耗模式成功，XBH_FAILURE 退出低功耗模式失败
+ */
+XBH_S32 ChipGsv2202E::setNormalMode(void)
+{
+    XBH_S32 ret = XBH_FAILURE;
+    XBH_U8 retryCount;
+    XBH_U8 normal_flag = 0x00; //0xFF09 reg初始值
+    XBH_U8 normal_data = CMD_WAKEUP; //2202e wakeup值
+    XBH_CHAR FwVer[10] = {0};
+    //基石建议拿到正确的版本信息后才能操作功耗寄存器0xFF09
+    if((ret = getFirmwareVersion(FwVer)) != XBH_SUCCESS)
+    {
+        return ret;
+    }
+    //成功拿到2202e的版本信息后，将2202e从低功耗模式唤醒
+    for(retryCount = 0; retryCount < 3; retryCount++)
+    {
+        if((ret = XbhService::getModuleInterface()->setI2cData(mI2cNumber, mI2cAddress, REG_RESET, 2, 1, &normal_data)) != XBH_SUCCESS)
+        {
+            XLOGE("[%s:%d] Set I2C error: %d", __func__, __LINE__, ret);
+            continue;
+        }
+        usleep(500 * 1000);
+        if((ret = XbhService::getModuleInterface()->getI2cData(mI2cNumber, mI2cAddress, REG_RESET, 2, 1, &normal_flag)) != XBH_SUCCESS)
+        {
+            XLOGE("[%s:%d] Get I2C error: %d", __func__, __LINE__, ret);
+            continue;
+        }
+
+        if(normal_flag == normal_data)
+        {
+            XLOGD("Wakeup success! Status: 0x%02X", normal_flag);
+            return XBH_SUCCESS;
+        }
+    }
+
+    XLOGD("Wakeup failed after 3 attempts! Final status: 0x%02X", normal_flag);
+    return XBH_FAILURE;
+}
+
 void ChipGsv2202E::run(const void* arg)
 {
     XLOGI("[%s:%d]  file name: %s", __func__, __LINE__, file_name);
@@ -524,6 +600,8 @@ void ChipGsv2202E::run(const void* arg)
     RXDDCDataPoint = 0;
 
     upgradeState = GSV2202EUpgrade_RUNNING;
+    property_set("persist.vendor.xbh.gsv2202e.ver", "");
+
     if (appI2CUpdateInit() == 1)
     {
         XLOGD ("[%s:%d] mcu run at partition B, upgrade partition A", __func__, __LINE__);
@@ -581,7 +659,7 @@ void ChipGsv2202E::run(const void* arg)
             upgradeState = GSV2202EUpgrade_SUCCESS;
             usleep(5*1000*1000);
             reset();
-            usleep(5*1000*1000);
+            usleep(10*1000*1000);
             getFirmwareVersion(FWVer);
         }
         else

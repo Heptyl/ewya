@@ -30,6 +30,7 @@ public:
 private:
     void run(const void* arg);
     XbhOpsManager();
+    XBH_S32 processFirstPowerOnOPS();
     static XbhOpsManager *mInstance;
     static XbhMutex mLock;
 

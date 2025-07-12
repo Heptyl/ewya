@@ -145,6 +145,23 @@ XBH_S32 XbhTouchManager::setTouchScaleRect(XBH_S32 resolution, XBH_S32 x, XBH_S3
 }
 
 /**
+ * 设置触摸缩放区域
+ */
+XBH_S32 XbhTouchManager::setTouchScalingRegion(XBH_S32 resolution, XBH_S32 x, XBH_S32 y, XBH_S32 w, XBH_S32 h)
+{
+    if(m_pXbhTouchControlInterface != NULL)
+    {
+        XLOGD("setTouchScaleRegion resolution = %d x = %d y = %d w = %d h = %d ",resolution, x, y, w, h);
+        return m_pXbhTouchControlInterface->setTouchScalingRegion(resolution, x, y, w, h);
+    }
+    else
+    {
+        XLOGD("m_pXbhTouchControlInterface is NULL ");
+    }
+    return XBH_FAILURE;
+}
+
+/**
  * 发送按键给触摸框，由触摸框转发
  */
 XBH_S32 XbhTouchManager::sendKeyToTp(XBH_U32 keyCode)

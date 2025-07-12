@@ -31,6 +31,8 @@ ChipGsv2702::ChipGsv2702(XBH_S32 i2cNumber, XBH_S32 i2cAddress, XBH_S32 powerGpi
 
     if(mPowerGpio != -1)
     {
+        XbhService::getModuleInterface()->setGpioOutputValue(mPowerGpio, !mPowerLevel);
+        usleep(100*1000);
         XbhService::getModuleInterface()->setGpioOutputValue(mPowerGpio, mPowerLevel);
         usleep(100*1000);
     }
@@ -54,7 +56,19 @@ ChipGsv2702::ChipGsv2702(XBH_S32 i2cNumber, XBH_S32 i2cAddress, XBH_S32 powerGpi
         XbhService::getModuleInterface()->setGpioOutputValue(mResetGpio, mResetLevel);
         usleep(100 * 1000);
     }
-
+    else
+    {
+        //当不支持硬件复位时，使用软件复位
+        //当存在后一级switch的时候需要等待后一级switch初始化完成
+        if(mHasNextPort)
+        {
+            usleep(2 * level * 1000 * 1000);
+        }
+        XBH_U8 resetData = CMD_RESET; //软复位
+        XbhService::getModuleInterface()->setI2cData(mI2cNumber, mI2cAddress, REG_HPD_ASSERT_CTRL, 2, 1, &resetData);
+        usleep(100 * 1000);
+    }
+    
     if(0x01 == m_u8SwitchPort.port0)
     {
         setRxHpd(0, true);

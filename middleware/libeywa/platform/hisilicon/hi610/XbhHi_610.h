@@ -58,6 +58,28 @@ using namespace std;
 #define XBH_H610_CUSDATA_HDCP_KEY_22_NAME_OFFSET     XBH_H610_CUSDATA_HDCP_KEY_22_OFFSET + XBH_H610_CUSDATA_HDCP_KEY_22_LEN + 2
 #define XBH_H610_CUSDATA_HDCP_KEY_22_NAME_LEN        0x40//64
 
+//gain offset带CRC16的数据结构体
+struct XBH_GAIN_OFFSET_H610_DATA_S
+{
+    XBH_U32 u32RedGain;
+    XBH_U32 u32GreenGain;
+    XBH_U32 u32BlueGain;
+    XBH_U32 u32RedOffset;
+    XBH_U32 u32GreenOffset;
+    XBH_U32 u32BlueOffset;
+    XBH_U32 u32CrcValue; //align 4byte but use crc16
+};
+
+// ColorTemp in cusdata for h610
+#define XBH_CUSDATA_H610_COLORTEMP_DATA_OFFSET      0x3600//0x3400 + 0x200
+#define XBH_CUSDATA_H610_COLORTEMP_DATA_LEN         (sizeof(struct XBH_GAIN_OFFSET_H610_DATA_S) * XBH_COLORTEMP_BUTT)
+
+
+#define H610_HDMIRX_0_PORT_ID       0
+#define H610_HDMIRX_1_PORT_ID       1
+#define H610_HDMIRX_2_PORT_ID       2
+#define H610_HDMIRX_3_PORT_ID       3
+
 struct XBH_MCU_GPIO_ATTR_S
 {
     uint32_t port:4;
@@ -109,10 +131,6 @@ public:
     XBH_S32 getDebugEnable(XBH_BOOL *bEnable);
     //override
     XBH_S32 setRtcAlarmTime(XBH_RTC_ALARM_INFO_S *stRtcAlarmInfo);
-    //override
-    XBH_S32 setLedPwrStatus(XBH_LED_LIGHT_E enState);
-    //override
-    XBH_S32 getLedPwrStatus(XBH_LED_LIGHT_E* enState);
     //override
     XBH_S32 getLightSensorValue(XBH_S32* s32Value);
     //override
@@ -310,6 +328,10 @@ public:
     //override
     XBH_S32 getColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data);
     //override
+    XBH_S32 saveColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data);
+    //override
+    XBH_S32 loadColorTempPara(XBH_COLORTEMP_E enColorTemp, XBH_GAIN_OFFSET_DATA_S* data);
+    //override
     XBH_S32 getPanelMapSwap(XBH_S32 * pBuff);
     //override
     XBH_S32 setPanelMapSwap(XBH_S32  pBuff);
@@ -378,7 +400,7 @@ public:
     //override
     XBH_S32 getBacklightWithOutSave(XBH_U32* value, XBH_PANEL_NUM_E enPanel);
     //override
-    XBH_S32 getSignalStatus(XBH_S32 *status);
+    XBH_S32 getSignalStatus(XBH_SOURCE_E currSource,XBH_S32 *status);
     //override
     XBH_S32 setDelayTimeForHdmiSwitch();
     //override
@@ -399,6 +421,20 @@ public:
     XBH_S32 initHdmiCecPhysicalAddr();
     //override
     XBH_S32 getHallSensorValue(XBH_S32* s32Value);
+    //override
+    XBH_S32 setCustProductInfo(const XBH_CHAR* pBUff);
+    //override
+    XBH_S32 getCustProductInfo(XBH_CHAR* pBUff);
+    //override
+    XBH_S32 setHdmiHPD(int portId, XBH_LEVEL_E level);
+    //override
+    XBH_S32 getSecurityHvbKeyStatus(XBH_U32 *u32Status);
+    //override
+    XBH_S32 getEmmcVersion(XBH_U32 *pu32Version);
+    //override
+    XBH_S32 getEmmcLifeTime(XBH_U32 *pu32LifeTime);
+    //override
+    XBH_S32 upgradeSystemFirmware(XBH_BOOL* bEnable);
 
 public:
     XBH_S32 readAndUpdateEdidBinFileByEdidType(int dev, const char* edidBinFilePath, int port);
